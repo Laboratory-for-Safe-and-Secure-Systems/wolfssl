@@ -151,6 +151,11 @@
 #define KYBER_MAX_CIPHER_TEXT_SIZE  KYBER512_CIPHER_TEXT_SIZE
 #endif
 
+#ifdef WOLF_PRIVATE_KEY_ID
+#define KYBER_MAX_ID_LEN    32
+#define KYBER_MAX_LABEL_LEN 32
+#endif
+
 enum {
     /* Types of Kyber keys. */
     WC_ML_KEM_512  = 0,
@@ -190,6 +195,16 @@ typedef struct KyberKey KyberKey;
 
 WOLFSSL_API int wc_KyberKey_Init(int type, KyberKey* key, void* heap,
     int devId);
+
+#ifdef WOLF_PRIVATE_KEY_ID
+WOLFSSL_API
+int wc_KyberKey_Init_Id(KyberKey* key, const unsigned char* id, int len,
+                        void* heap, int devId);
+WOLFSSL_API
+int wc_KyberKey_Init_Label(KyberKey* key, const char* label, void* heap,
+                           int devId);
+#endif
+
 WOLFSSL_API void wc_KyberKey_Free(KyberKey* key);
 
 WOLFSSL_API int wc_KyberKey_MakeKey(KyberKey* key, WC_RNG* rng);

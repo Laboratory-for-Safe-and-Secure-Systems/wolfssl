@@ -32,6 +32,10 @@
 #include <wolfssl/wolfcrypt/sha3.h>
 #include <wolfssl/wolfcrypt/kyber.h>
 
+#ifdef WOLF_CRYPTO_CB
+    #include <wolfssl/wolfcrypt/cryptocb.h>
+#endif
+
 #ifdef WOLFSSL_HAVE_KYBER
 
 #ifdef noinline
@@ -121,6 +125,12 @@ struct KyberKey {
 #endif
     /* Flags indicating what is stored in the key. */
     int flags;
+#ifdef WOLF_PRIVATE_KEY_ID
+    byte id[KYBER_MAX_ID_LEN];
+    int  idLen;
+    char label[KYBER_MAX_LABEL_LEN];
+    int  labelLen;
+#endif
 
     /* A pseudo-random function object. */
     KYBER_HASH_T hash;
