@@ -57,11 +57,13 @@
  *   some platforms and is smaller in code size.
  */
 
-#include <wolfssl/wolfcrypt/wc_kyber.h>
+// #include <wolfssl/wolfcrypt/wc_kyber.h>
 #include <wolfssl/wolfcrypt/cpuid.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef WOLFSSL_WC_KYBER
+
+#include <wolfssl/wolfcrypt/wc_kyber.h>
 
 /* Declared in wc_kyber.c to stop compiler optimizer from simplifying. */
 extern volatile sword16 kyber_opt_blocker;
