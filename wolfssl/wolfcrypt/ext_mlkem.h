@@ -58,9 +58,19 @@ struct KyberKey {
      * configuration time. */
     int type;
 
+    bool pubKeySet;
+    bool prvKeySet;
+    void* heap; /* heap hint */
+
 #ifdef WOLF_CRYPTO_CB
     void* devCtx;
     int   devId;
+#endif
+#ifdef WOLF_PRIVATE_KEY_ID
+    byte id[MLKEM_MAX_ID_LEN];
+    int  idLen;
+    char label[MLKEM_MAX_LABEL_LEN];
+    int  labelLen;
 #endif
 
     byte priv[EXT_KYBER_MAX_PRIV_SZ];
