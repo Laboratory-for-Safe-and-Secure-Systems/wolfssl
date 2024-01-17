@@ -266,7 +266,8 @@ int wc_dilithium_init_ex(dilithium_key* key, void* heap, int devId)
     key->labelLen = 0;
 #endif
 
-    (void) heap;
+    key->heap = heap;
+
     (void) devId;
 
     return 0;
