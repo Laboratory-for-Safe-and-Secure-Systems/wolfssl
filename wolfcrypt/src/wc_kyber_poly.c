@@ -68,7 +68,6 @@
 #endif
 
 #include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/wc_kyber.h>
 #include <wolfssl/wolfcrypt/cpuid.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
@@ -80,6 +79,8 @@
     #define WOLFSSL_MISC_INCLUDED
     #include <wolfcrypt/src/misc.c>
 #endif
+
+#include <wolfssl/wolfcrypt/wc_kyber.h>
 
 /* Declared in wc_kyber.c to stop compiler optimizer from simplifying. */
 extern volatile sword16 kyber_opt_blocker;
