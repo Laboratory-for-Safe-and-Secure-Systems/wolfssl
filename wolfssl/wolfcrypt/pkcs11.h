@@ -64,6 +64,11 @@ extern "C" {
 #define CKF_LIBRARY_CANT_CREATE_OS_THREADS    0x00000001UL
 #define CKF_OS_LOCKING_OK                     0x00000002UL
 
+/* PQC extension: KEM flags */
+#define CKF_EXTENSION                         0x80000000UL
+#define CKF_ENCAPSULATE             (CKF_EXTENSION | 0x04000000UL)
+#define CKF_DECAPSULATE             (CKF_EXTENSION | 0x08000000UL)
+
 #define CKU_SO                                0UL
 #define CKU_USER                              1UL
 #define CKU_CONTEXT_SPECIFIC                  2UL
@@ -86,6 +91,12 @@ extern "C" {
 #define CKK_SHA384_HMAC                       0x0000002cUL
 #define CKK_SHA512_HMAC                       0x0000002dUL
 #define CKK_SHA224_HMAC                       0x0000002eUL
+#define CKK_VENDOR_DEFINED                    0x80000000UL
+
+/* PQC extension: vendor defined keytypes*/
+#define CKK_ML_DSA                  (CKK_VENDOR_DEFINED | 0x0004001UL)
+#define CKK_ML_KEM                  (CKK_VENDOR_DEFINED | 0x0004002UL)
+
 
 #define CKA_CLASS                             0x00000000UL
 #define CKA_TOKEN                             0x00000001UL
@@ -136,6 +147,13 @@ extern "C" {
 #define CKA_HW_FEATURE_TYPE                   0x00000300UL
 #define CKA_RESET_ON_INIT                     0x00000301UL
 #define CKA_HAS_RESET                         0x00000302UL
+#define CKA_VENDOR_DEFINED                    0x80000000UL
+
+/* PQC extension: vendor defined attributes */
+#define CKA_ENCAPSULATE             (CKA_VENDOR_DEFINED | 0x00000401UL)
+#define CKA_DECAPSULATE             (CKA_VENDOR_DEFINED | 0x00000402UL)
+#define CKA_PARAMETER_SET           (CKA_VENDOR_DEFINED | 0x00000501UL)
+
 
 #define CKM_RSA_PKCS_KEY_PAIR_GEN             0x00000000UL
 #define CKM_RSA_PKCS                          0x00000001UL
@@ -144,6 +162,7 @@ extern "C" {
 #define CKM_RSA_PKCS_PSS                      0x0000000DUL
 #define CKM_DH_PKCS_KEY_PAIR_GEN              0x00000020UL
 #define CKM_DH_PKCS_DERIVE                    0x00000021UL
+#define CKM_SHA512_256                        0x0000004CUL
 #define CKM_MD5_HMAC                          0x00000211UL
 #define CKM_SHA_1                             0x00000220UL
 #define CKM_SHA_1_HMAC                        0x00000221UL
@@ -155,6 +174,9 @@ extern "C" {
 #define CKM_SHA384_HMAC                       0x00000261UL
 #define CKM_SHA512                            0x00000270UL
 #define CKM_SHA512_HMAC                       0x00000271UL
+#define CKM_SHA3_256                          0x000002B0UL
+#define CKM_SHA3_384                          0x000002C0UL
+#define CKM_SHA3_512                          0x000002D0UL
 #define CKM_GENERIC_SECRET_KEY_GEN            0x00000350UL
 #define CKM_EC_KEY_PAIR_GEN                   0x00001040UL
 #define CKM_ECDSA                             0x00001041UL
@@ -163,6 +185,26 @@ extern "C" {
 #define CKM_AES_KEY_GEN                       0x00001080UL
 #define CKM_AES_CBC                           0x00001082UL
 #define CKM_AES_GCM                           0x00001087UL
+#define CKM_VENDOR_DEFINED                    0x80000000UL
+
+/* PQC extension: vendor defined mechanisms */
+#define CKM_ML_KEM_KEY_PAIR_GEN     (CKM_VENDOR_DEFINED | 0x0008001UL)
+#define CKM_ML_DSA_KEY_PAIR_GEN     (CKM_VENDOR_DEFINED | 0x0008002UL)
+#define CKM_ML_KEM                  (CKM_VENDOR_DEFINED | 0x0008003UL)
+#define CKM_ML_DSA                  (CKM_VENDOR_DEFINED | 0x0008004UL)
+#define CKM_SHAKE128                (CKM_VENDOR_DEFINED | 0x0008005UL)
+#define CKM_SHAKE256                (CKM_VENDOR_DEFINED | 0x0008006UL)
+
+
+/* PQC extension: parameter set types */
+#define CKP_ML_DSA_44                         0x00000001UL
+#define CKP_ML_DSA_65                         0x00000002UL
+#define CKP_ML_DSA_87                         0x00000003UL
+
+#define CKP_ML_KEM_512                        0x00000021UL
+#define CKP_ML_KEM_768                        0x00000022UL
+#define CKP_ML_KEM_1024                       0x00000023UL
+
 
 /* full data RSA PK callbacks */
 #define CKM_SHA1_RSA_PKCS_PSS                 0x0000000EUL
@@ -572,8 +614,82 @@ struct CK_FUNCTION_LIST {
     CK_RV (*C_CancelFunction)(CK_SESSION_HANDLE hSession);
     CK_RV (*C_WaitForSlotEvent)(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot,
                                 CK_VOID_PTR pRserved);
-
+    CK_RV (*C_EncapsulateInit)(CK_SESSION_HANDLE hSession,
+                               CK_MECHANISM_PTR  pMechanism,
+                               CK_OBJECT_HANDLE  hKey);
+    CK_RV (*C_Encapsulate)(CK_SESSION_HANDLE hSession,
+                           CK_BYTE_PTR pCipherText,
+                           CK_ULONG_PTR pulCipherTextLen,
+                           CK_BYTE_PTR pSharedSecret,
+                           CK_ULONG_PTR pulSharedSecretLen);
+    CK_RV (*C_DecapsulateInit)(CK_SESSION_HANDLE hSession,
+                               CK_MECHANISM_PTR pMechanism,
+                               CK_OBJECT_HANDLE hKey);
+    CK_RV (*C_Decapsulate)(CK_SESSION_HANDLE hSession,
+                           CK_BYTE_PTR pCipherText,
+                           CK_ULONG ulCipherTextLen,
+                           CK_BYTE_PTR pSharedSecret,
+                           CK_ULONG_PTR pulSharedSecretLen);
 };
+
+
+/* PQC extension: parameter set types */
+typedef CK_ULONG CK_ML_DSA_PARAMETER_SET_TYPE;
+typedef CK_ML_DSA_PARAMETER_SET_TYPE* CK_ML_DSA_PARAMETER_SET_TYPE_PTR;
+
+typedef CK_ULONG CK_ML_KEM_PARAMETER_SET_TYPE;
+typedef CK_ML_KEM_PARAMETER_SET_TYPE* CK_ML_KEM_PARAMETER_SET_TYPE_PTR;
+
+
+/*
+ * CK_ML_DSA_PARAMS provides parameters for ML-DSA sign and verify
+ * operations.
+ *
+ * The `phFlag` is a flag to indicate if the pre-hash is used. If `phFlag` is
+ * set to `CK_TRUE`, the `hash` parameter is used as pre-hash algorithm. If
+ * set to `CK_FALSE`, the `hash` parameter is ignored.
+ *
+ * Allowed mechanisms for `hash` are:
+ * - CKM_SHA256
+ * - CKM_SHA384
+ * - CKM_SHA512
+ * - CKM_SHA512_256
+ * - CKM_SHA3_256
+ * - CKM_SHA3_384
+ * - CKM_SHA3_512
+ * - CKM_SHAKE128
+ * - CKM_SHAKE256
+ *
+ * The `ulContextDataLen` and `pContextData` parameters are used to provide
+ * additional context data for the signature operation. The maximum length of
+ * the context data is 255 bytes. If no context data is used for the operation,
+ * `ulContextDataLen` must be set to 0 and `pContextData` must be set to `NULL`.
+ *
+ * When no CK_ML_DSA_PARAMS structure is set in `C_SignInit` or `C_VerifyInit`
+ * (`pMechanism->ulParameterLen = 0` and `pMechanism->pParameter = NULL`), then
+ * the operation is performed without pre-hash and without context data.
+ */
+typedef struct CK_ML_DSA_PARAMS {
+    CK_BBOOL            phFlag;
+    CK_MECHANISM_TYPE   hash;
+    CK_ULONG            ulContextDataLen;
+    CK_BYTE_PTR         pContextData;
+} CK_ML_DSA_PARAMS;
+
+typedef CK_ML_DSA_PARAMS* CK_ML_DSA_PARAMS_PTR;
+
+
+/*
+ * CK_ML_KEM_PARAMS provides the parameters to the
+ * CKM_ML_KEM mechanisms, where each party contributes one key pair.
+ */
+typedef struct CK_ML_KEM_PARAMS {
+  CK_BYTE_PTR           pPublicKey;
+  CK_ULONG              ulPublicKeyLen;
+} CK_ML_KEM_PARAMS;
+
+typedef CK_ML_KEM_PARAMS* CK_ML_KEM_PARAMS_PTR;
+
 
 #ifdef __cplusplus
 }
