@@ -68,11 +68,12 @@
 #endif
 
 #include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/wc_kyber.h>
 #include <wolfssl/wolfcrypt/cpuid.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef WOLFSSL_WC_KYBER
+
+#include <wolfssl/wolfcrypt/wc_kyber.h>
 
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
