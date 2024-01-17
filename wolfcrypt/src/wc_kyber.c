@@ -130,10 +130,67 @@ int wc_KyberKey_Init(int type, KyberKey* key, void* heap, int devId)
         kyber_init();
     }
 
+#ifdef WOLF_PRIVATE_KEY_ID
+    key->idLen = 0;
+    key->labelLen = 0;
+#endif
+
     (void)devId;
 
     return ret;
 }
+
+#ifdef WOLF_PRIVATE_KEY_ID
+int wc_KyberKey_Init_Id(KyberKey* key, const unsigned char* id, int len,
+                        void* heap, int devId)
+{
+    int ret = 0;
+
+    if (key == NULL)
+        ret = BAD_FUNC_ARG;
+    if (ret == 0 && (len < 0 || len > KYBER_MAX_ID_LEN))
+        ret = BUFFER_E;
+
+    if (ret == 0) {
+        /* We set the maximum size here as we don't know what's stored in
+         * hardware. */
+        ret = wc_KyberKey_Init(KYBER1024, key, heap, devId);
+    }
+    if (ret == 0 && id != NULL && len != 0) {
+        XMEMCPY(key->id, id, (size_t)len);
+        key->idLen = len;
+    }
+
+    return ret;
+}
+
+int wc_KyberKey_Init_Label(KyberKey* key, const char* label, void* heap,
+                           int devId)
+{
+    int ret = 0;
+    int labelLen = 0;
+
+    if (key == NULL || label == NULL)
+        ret = BAD_FUNC_ARG;
+    if (ret == 0) {
+        labelLen = (int)XSTRLEN(label);
+        if (labelLen == 0 || labelLen > KYBER_MAX_LABEL_LEN)
+            ret = BUFFER_E;
+    }
+
+    if (ret == 0) {
+        /* We set the maximum size here as we don't know what's stored in
+         * hardware. */
+        ret = wc_KyberKey_Init(KYBER1024, key, heap, devId);
+    }
+    if (ret == 0) {
+        XMEMCPY(key->label, label, (size_t)labelLen);
+        key->labelLen = labelLen;
+    }
+
+    return ret;
+}
+#endif
 
 /**
  * Free the Kyber key object.
