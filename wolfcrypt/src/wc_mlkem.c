@@ -90,6 +90,10 @@
     #include <wolfssl/wolfcrypt/cryptocb.h>
 #endif
 
+#ifdef WOLF_CRYPTO_CB
+    #include <wolfssl/wolfcrypt/cryptocb.h>
+#endif
+
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -2422,7 +2426,7 @@ int wc_MlKemKey_EncodePrivateKey(MlKemKey* key, unsigned char* out, word32 len)
         }
     }
     /* Check buffer is big enough for encoding. */
-    if ((ret == 0) && (len != privLen)) {
+    if ((ret == 0) && (len < privLen)) {
         ret = BUFFER_E;
     }
 
@@ -2537,7 +2541,7 @@ int wc_MlKemKey_EncodePublicKey(MlKemKey* key, unsigned char* out, word32 len)
         }
     }
     /* Check buffer is big enough for encoding. */
-    if ((ret == 0) && (len != pubLen)) {
+    if ((ret == 0) && (len < pubLen)) {
         ret = BUFFER_E;
     }
 
