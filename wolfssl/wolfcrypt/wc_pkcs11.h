@@ -51,6 +51,7 @@ enum Pkcs11InterfaceVersionType {
     WC_PCKS11VERSION_2_40,
     WC_PCKS11VERSION_3_0,
     WC_PCKS11VERSION_3_1,
+    WC_PCKS11VERSION_3_2,
 };
 
 typedef struct Pkcs11Dev {
@@ -86,6 +87,8 @@ enum Pkcs11KeyType {
     PKCS11_KEY_TYPE_HMAC,
     PKCS11_KEY_TYPE_RSA,
     PKCS11_KEY_TYPE_EC,
+    PKCS11_KEY_TYPE_DILITHIUM,
+    PKCS11_KEY_TYPE_FALCON,
 };
 
 WOLFSSL_API int wc_Pkcs11_Initialize(Pkcs11Dev* dev, const char* library,
@@ -112,6 +115,8 @@ WOLFSSL_API void wc_Pkcs11Token_Close(Pkcs11Token* token);
 
 WOLFSSL_API int wc_Pkcs11StoreKey(Pkcs11Token* token, int type, int clear,
     void* key);
+WOLFSSL_API int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear,
+    void* key, int persistent);
 
 WOLFSSL_API int wc_Pkcs11_CryptoDevCb(int devId, wc_CryptoInfo* info,
     void* ctx);

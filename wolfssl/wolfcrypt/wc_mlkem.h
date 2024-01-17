@@ -121,6 +121,13 @@ struct MlKemKey {
     /* Flags indicating what is stored in the key. */
     int flags;
 
+#ifdef WOLF_PRIVATE_KEY_ID
+    byte id[MLKEM_MAX_ID_LEN];
+    int  idLen;
+    char label[MLKEM_MAX_LABEL_LEN];
+    int  labelLen;
+#endif
+
     /* A pseudo-random function object. */
     MLKEM_HASH_T hash;
     /* A pseudo-random function object. */

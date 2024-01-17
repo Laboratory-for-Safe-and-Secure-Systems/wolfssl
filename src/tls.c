@@ -10929,7 +10929,8 @@ int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input, word16 length,
 
     /* Extension data is valid, but if we are the server and we don't have an
      * alt private key, do not respond with CKS extension. */
-    if (wolfSSL_is_server(ssl) && ssl->buffers.altKey == NULL) {
+    if (wolfSSL_is_server(ssl) &&
+        (ssl->buffers.altKey == NULL || ssl->buffers.altKeyType == 0)) {
         ssl->sigSpec = NULL;
         ssl->sigSpecSz = 0;
         return 0;

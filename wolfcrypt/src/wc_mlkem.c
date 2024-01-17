@@ -74,6 +74,10 @@
 #include <wolfssl/wolfcrypt/hash.h>
 #include <wolfssl/wolfcrypt/memory.h>
 
+#ifdef WOLF_CRYPTO_CB
+    #include <wolfssl/wolfcrypt/cryptocb.h>
+#endif
+
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -205,6 +209,11 @@ int wc_MlKemKey_Init(MlKemKey* key, int type, void* heap, int devId)
     #endif
         key->flags = 0;
 
+    #ifdef WOLF_PRIVATE_KEY_ID
+        key->idLen = 0;
+        key->labelLen = 0;
+    #endif
+
         /* Zero out all data. */
         XMEMSET(&key->prf, 0, sizeof(key->prf));
 
@@ -223,6 +232,58 @@ int wc_MlKemKey_Init(MlKemKey* key, int type, void* heap, int devId)
 
     return ret;
 }
+
+#ifdef WOLF_PRIVATE_KEY_ID
+int wc_MlKemKey_Init_Id(MlKemKey* key, const unsigned char* id, int len,
+                        void* heap, int devId)
+{
+    int ret = 0;
+
+    if (key == NULL)
+        ret = BAD_FUNC_ARG;
+    if (ret == 0 && (len < 0 || len > MLKEM_MAX_ID_LEN))
+        ret = BUFFER_E;
+
+    if (ret == 0) {
+        /* We set the maximum size here as we don't know what's stored in
+         * hardware. */
+        ret = wc_MlKemKey_Init(key, WC_ML_KEM_1024, heap, devId);
+    }
+    if (ret == 0 && id != NULL && len != 0) {
+        XMEMCPY(key->id, id, (size_t)len);
+        key->idLen = len;
+    }
+
+    return ret;
+}
+
+int wc_MlKemKey_Init_Label(MlKemKey* key, const char* label, void* heap,
+                           int devId)
+{
+    int ret = 0;
+    int labelLen = 0;
+
+    if (key == NULL || label == NULL)
+        ret = BAD_FUNC_ARG;
+    if (ret == 0) {
+        labelLen = (int)XSTRLEN(label);
+        if (labelLen == 0 || labelLen > MLKEM_MAX_LABEL_LEN)
+            ret = BUFFER_E;
+    }
+
+    if (ret == 0) {
+        /* We set the maximum size here as we don't know what's stored in
+         * hardware. */
+        ret = wc_MlKemKey_Init(key, WC_ML_KEM_1024, heap, devId);
+    }
+    if (ret == 0) {
+        XMEMCPY(key->label, label, (size_t)labelLen);
+        key->labelLen = labelLen;
+    }
+
+    return ret;
+}
+#endif
 
 /**
  * Free the Kyber key object.
@@ -283,6 +344,20 @@ int wc_MlKemKey_MakeKey(MlKemKey* key, WC_RNG* rng)
     if ((key == NULL) || (rng == NULL)) {
         ret = BAD_FUNC_ARG;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    #ifndef WOLF_CRYPTO_CB_FIND
+    if (key->devId != INVALID_DEVID)
+    #endif
+    {
+        ret = wc_CryptoCb_MakePqcKemKey(rng, WC_PQC_KEM_TYPE_KYBER,
+                                        key->type, key);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+            return ret;
+        /* fall-through when unavailable */
+        ret = 0;
+    }
+#endif
 
     if (ret == 0) {
         /* Generate random to use with PRFs.
@@ -887,11 +962,32 @@ int wc_MlKemKey_Encapsulate(MlKemKey* key, unsigned char* c, unsigned char* k,
 {
     int ret = 0;
     unsigned char m[WC_ML_KEM_ENC_RAND_SZ];
+#ifdef WOLF_CRYPTO_CB
+    word32 ctlen = 0;
+#endif
 
     /* Validate parameters. */
     if ((key == NULL) || (c == NULL) || (k == NULL) || (rng == NULL)) {
         ret = BAD_FUNC_ARG;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+        ret = wc_KyberKey_CipherTextSize(key, &ctlen);
+    }
+    if ((ret == 0)
+    #ifndef WOLF_CRYPTO_CB_FIND
+        && (key->devId != INVALID_DEVID)
+    #endif
+    ) {
+        ret = wc_CryptoCb_PqcEncapsulate(c, ctlen, k, KYBER_SS_SZ, rng,
+                                         WC_PQC_KEM_TYPE_KYBER, key);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+            return ret;
+        /* fall-through when unavailable */
+        ret = 0;
+    }
+#endif
 
     if (ret == 0) {
         /* Generate seed for use with PRFs.
@@ -1410,6 +1506,21 @@ int wc_MlKemKey_Decapsulate(MlKemKey* key, unsigned char* ss,
     if ((ret == 0) && (len != ctSz)) {
         ret = BUFFER_E;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    if ((ret == 0)
+    #ifndef WOLF_CRYPTO_CB_FIND
+        && (key->devId != INVALID_DEVID)
+    #endif
+    ) {
+        ret = wc_CryptoCb_PqcDecapsulate(ct, ctSz, ss, KYBER_SS_SZ,
+                                         WC_PQC_KEM_TYPE_KYBER, key);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+            return ret;
+        /* fall-through when unavailable */
+        ret = 0;
+    }
+#endif
 
 #if !defined(USE_INTEL_SPEEDUP) && !defined(WOLFSSL_NO_MALLOC)
     if (ret == 0) {
@@ -1960,7 +2071,7 @@ int wc_MlKemKey_EncodePrivateKey(MlKemKey* key, unsigned char* out, word32 len)
         }
     }
     /* Check buffer is big enough for encoding. */
-    if ((ret == 0) && (len != privLen)) {
+    if ((ret == 0) && (len < privLen)) {
         ret = BUFFER_E;
     }
 
@@ -2075,7 +2186,7 @@ int wc_MlKemKey_EncodePublicKey(MlKemKey* key, unsigned char* out, word32 len)
         }
     }
     /* Check buffer is big enough for encoding. */
-    if ((ret == 0) && (len != pubLen)) {
+    if ((ret == 0) && (len < pubLen)) {
         ret = BUFFER_E;
     }
 

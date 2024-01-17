@@ -117,18 +117,77 @@ int wc_MlKemKey_Init(MlKemKey* key, int type, void* heap, int devId)
 
         /* Keep type for parameters. */
         key->type = type;
+        key->pubKeySet = false;
+        key->prvKeySet = false;
 
 #ifdef WOLF_CRYPTO_CB
         key->devCtx = NULL;
         key->devId = devId;
 #endif
+#ifdef WOLF_PRIVATE_KEY_ID
+        key->idLen = 0;
+        key->labelLen = 0;
+#endif
     }
 
-    (void)heap;
+    key->heap = heap;
+
     (void)devId;
 
     return ret;
 }
+
+#ifdef WOLF_PRIVATE_KEY_ID
+int wc_KyberKey_Init_Id(KyberKey* key, const unsigned char* id, int len,
+                        void* heap, int devId)
+{
+    int ret = 0;
+
+    if (key == NULL)
+        ret = BAD_FUNC_ARG;
+    if (ret == 0 && (len < 0 || len > KYBER_MAX_ID_LEN))
+        ret = BUFFER_E;
+
+    if (ret == 0) {
+        /* We set the maximum size here as we don't know what's stored in
+         * hardware. */
+        ret = wc_KyberKey_Init(KYBER_LEVEL5, key, heap, devId);
+    }
+    if (ret == 0 && id != NULL && len != 0) {
+        XMEMCPY(key->id, id, (size_t)len);
+        key->idLen = len;
+    }
+
+    return ret;
+}
+
+int wc_KyberKey_Init_Label(KyberKey* key, const char* label, void* heap,
+                           int devId)
+{
+    int ret = 0;
+    int labelLen = 0;
+
+    if (key == NULL || label == NULL)
+        ret = BAD_FUNC_ARG;
+    if (ret == 0) {
+        labelLen = (int)XSTRLEN(label);
+        if (labelLen == 0 || labelLen > KYBER_MAX_LABEL_LEN)
+            ret = BUFFER_E;
+    }
+
+    if (ret == 0) {
+        /* We set the maximum size here as we don't know what's stored in
+         * hardware. */
+        ret = wc_KyberKey_Init(KYBER_LEVEL5, key, heap, devId);
+    }
+    if (ret == 0) {
+        XMEMCPY(key->label, label, (size_t)labelLen);
+        key->labelLen = labelLen;
+    }
+
+    return ret;
+}
+#endif
 
 /**
  * Free the Kyber key object.
@@ -397,6 +456,8 @@ int wc_MlKemKey_MakeKey(MlKemKey* key, WC_RNG* rng)
             OQS_SUCCESS) {
             ret = BAD_FUNC_ARG;
         }
+        key->pubKeySet = true;
+        key->prvKeySet = true;
     }
     wolfSSL_liboqsRngMutexUnlock();
     OQS_KEM_free(kem);
@@ -645,6 +706,7 @@ int wc_MlKemKey_DecodePrivateKey(MlKemKey* key, const unsigned char* in,
 
     if (ret == 0) {
         XMEMCPY(key->priv, in, privLen);
+        key->prvKeySet = true;
     }
 
     return ret;
@@ -685,6 +747,7 @@ int wc_MlKemKey_DecodePublicKey(MlKemKey* key, const unsigned char* in,
 
     if (ret == 0) {
         XMEMCPY(key->pub, in, pubLen);
+        key->pubKeySet = true;
     }
 
     return ret;
