@@ -275,6 +275,10 @@
 #define KYBER_ENC_RAND_SZ       WC_ML_KEM_ENC_RAND_SZ
 #define KYBER_POLY_SIZE         WC_ML_KEM_POLY_SIZE
 
+#ifdef WOLF_PRIVATE_KEY_ID
+#define MLKEM_MAX_ID_LEN    32
+#define MLKEM_MAX_LABEL_LEN 32
+#endif
 
 enum {
     /* Types of Kyber keys. */
@@ -315,6 +319,14 @@ typedef struct MlKemKey MlKemKey;
 
 WOLFSSL_API int wc_MlKemKey_Init(MlKemKey* key, int type, void* heap,
     int devId);
+#ifdef WOLF_PRIVATE_KEY_ID
+WOLFSSL_API
+int wc_MlKemKey_Init_Id(MlKemKey* key, const unsigned char* id, int len,
+                        void* heap, int devId);
+WOLFSSL_API
+int wc_MlKemKey_Init_Label(MlKemKey* key, const char* label, void* heap,
+                           int devId);
+#endif
 WOLFSSL_API int wc_MlKemKey_Free(MlKemKey* key);
 
 WOLFSSL_API int wc_MlKemKey_MakeKey(MlKemKey* key, WC_RNG* rng);
