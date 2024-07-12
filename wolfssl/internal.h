@@ -3761,6 +3761,9 @@ struct WOLFSSL_CTX {
     byte        privateKeyLabel:1;
     int         privateKeySz;
     int         privateKeyDevId;
+#ifdef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
+    void*       decodedPrivateKey;
+#endif
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
     DerBuffer*  altPrivateKey;

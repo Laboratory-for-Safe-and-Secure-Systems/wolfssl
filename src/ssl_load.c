@@ -1018,9 +1018,10 @@ static int ProcessBufferTryDecodeDilithium(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
             /* Format unknown so keep trying. */
             ret = 0;
         }
-
+    #ifndef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
         /* Free dynamically allocated data in key. */
         wc_dilithium_free(key);
+    #endif
     }
     else if ((ret == WC_NO_ERR_TRACE(ALGO_ID_E)) && (*keyFormat == 0)) {
         WOLFSSL_MSG("Not a Dilithium key");
@@ -1028,8 +1029,13 @@ static int ProcessBufferTryDecodeDilithium(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
         ret = 0;
     }
 
+#ifdef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
+    ctx->decodedPrivateKey = (void*) key;
+#else
     /* Dispose of allocated key. */
     XFREE(key, heap, DYNAMIC_TYPE_DILITHIUM);
+#endif
+
     return ret;
 }
 #endif /* HAVE_DILITHIUM */
