@@ -2547,6 +2547,10 @@ int InitSSL_Ctx(WOLFSSL_CTX* ctx, WOLFSSL_METHOD* method, void* heap)
     ctx->doAppleNativeCertValidationFlag = 0;
 #endif /* defined(__APPLE__) && defined(WOLFSSL_SYS_CA_CERTS) */
 
+#ifdef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
+    ctx->decodedPrivateKey = NULL;
+#endif
+
     return ret;
 }
 
@@ -2652,6 +2656,43 @@ void SSL_CtxResourceFree(WOLFSSL_CTX* ctx)
 #ifdef WOLFSSL_BLIND_PRIVATE_KEY
     FreeDer(&ctx->privateKeyMask);
 #endif
+#ifdef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
+    if (ctx->decodedPrivateKey != NULL) {
+        switch (ctx->privateKeyType) {
+        #ifndef NO_RSA
+            case rsa_sa_algo:
+                wc_FreeRsaKey((RsaKey*)ctx->decodedPrivateKey);
+                XFREE(ctx->decodedPrivateKey, ctx->heap, DYNAMIC_TYPE_RSA);
+                break;
+        #endif /* ! NO_RSA */
+        #ifdef HAVE_ECC
+            case ecc_dsa_sa_algo:
+                wc_ecc_free((ecc_key*)ctx->decodedPrivateKey);
+                XFREE(ctx->decodedPrivateKey, ctx->heap, DYNAMIC_TYPE_ECC);
+                break;
+        #endif /* HAVE_ECC */
+        #if defined(HAVE_FALCON)
+            case falcon_level1_sa_algo:
+            case falcon_level5_sa_algo:
+                wc_falcon_free((falcon_key*)ctx->decodedPrivateKey);
+                XFREE(ctx->decodedPrivateKey, ctx->heap, DYNAMIC_TYPE_FALCON);
+                break;
+        #endif /* HAVE_FALCON */
+        #if defined(HAVE_DILITHIUM)
+            case dilithium_level2_sa_algo:
+            case dilithium_level3_sa_algo:
+            case dilithium_level5_sa_algo:
+                wc_dilithium_free((dilithium_key*)ctx->decodedPrivateKey);
+                XFREE(ctx->decodedPrivateKey, ctx->heap, DYNAMIC_TYPE_DILITHIUM);
+                break;
+        #endif /* HAVE_DILITHIUM */
+            default:
+                break;
+        }
+        ctx->decodedPrivateKey = NULL;
+    }
+#endif
+
 #ifdef WOLFSSL_DUAL_ALG_CERTS
     if (ctx->altPrivateKey != NULL && ctx->altPrivateKey->buffer != NULL) {
         ForceZero(ctx->altPrivateKey->buffer, ctx->altPrivateKey->length);
@@ -6848,6 +6889,10 @@ int SetSSL_CTX(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
     ssl->buffers.keyLabel = ctx->privateKeyLabel;
     ssl->buffers.keySz    = ctx->privateKeySz;
     ssl->buffers.keyDevId = ctx->privateKeyDevId;
+#ifdef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
+    ssl->hsKey            = ctx->decodedPrivateKey;
+    // ssl->hsType           = ctx->privateKeyType;
+#endif
 #ifdef WOLFSSL_DUAL_ALG_CERTS
 #ifndef WOLFSSL_BLIND_PRIVATE_KEY
     ssl->buffers.altKey   = ctx->altPrivateKey;
@@ -8090,7 +8135,9 @@ void FreeKeyExchange(WOLFSSL* ssl)
     }
 
     /* Free handshake key */
+#ifndef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
     FreeKey(ssl, ssl->hsType, &ssl->hsKey);
+#endif
 #ifdef WOLFSSL_DUAL_ALG_CERTS
     FreeKey(ssl, ssl->hsAltType, &ssl->hsAltKey);
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
@@ -28150,6 +28197,56 @@ int DecodePrivateKey(WOLFSSL *ssl, word32* length)
             ERROR_OUT(NO_PRIVATE_KEY, exit_dpk);
         }
     }
+
+#ifdef WOLFSSL_KEEP_DECODED_PRIVATE_KEY
+    if (ssl->hsKey != NULL)
+    {
+        if (ssl->buffers.keyType == rsa_sa_algo) {
+    #ifndef NO_RSA
+            ssl->hsType = DYNAMIC_TYPE_RSA;
+            /* Return the maximum signature length. */
+            *length = wc_RsaEncryptSize((RsaKey*)ssl->hsKey);
+            ret = 0;
+    #else
+            ret = NOT_COMPILED_IN;
+    #endif
+        }
+        else if (ssl->buffers.keyType == ecc_dsa_sa_algo) {
+    #ifdef HAVE_ECC
+            /* Return the maximum signature length. */
+            ssl->hsType = DYNAMIC_TYPE_ECC;
+            *length = (word32)wc_ecc_sig_size_calc(ssl->buffers.keySz);
+            ret = 0;
+    #else
+            ret = NOT_COMPILED_IN;
+    #endif
+        }
+        else if ((ssl->buffers.keyType == falcon_level1_sa_algo) ||
+                 (ssl->buffers.keyType == falcon_level5_sa_algo)) {
+    #if defined(HAVE_FALCON)
+            ssl->hsType = DYNAMIC_TYPE_FALCON;
+            /* Return the maximum signature length. */
+            *length = wc_falcon_sig_size((falcon_key*)ssl->hsKey);
+            ret = 0;
+    #else
+            ret = NOT_COMPILED_IN;
+    #endif
+        }
+        else if ((ssl->buffers.keyType == dilithium_level2_sa_algo) ||
+                 (ssl->buffers.keyType == dilithium_level3_sa_algo) ||
+                 (ssl->buffers.keyType == dilithium_level5_sa_algo)) {
+    #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_SIGN)
+            ssl->hsType = DYNAMIC_TYPE_DILITHIUM;
+            /* Return the maximum signature length. */
+            *length = wc_dilithium_sig_size((dilithium_key*)ssl->hsKey);
+            ret = 0;
+    #else
+            ret = NOT_COMPILED_IN;
+    #endif
+        }
+        goto exit_dpk;
+    }
+#endif
 
 #ifdef WOLF_PRIVATE_KEY_ID
     if (ssl->buffers.keyDevId != INVALID_DEVID && (ssl->buffers.keyId ||
