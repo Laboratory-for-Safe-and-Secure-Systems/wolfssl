@@ -430,11 +430,35 @@ static void SetKeyShare(WOLFSSL* ssl, int onlyKeyShare, int useX25519,
             if (XSTRCMP(pqcAlg, "P384_ML_KEM_768") == 0) {
                 group = WOLFSSL_P384_ML_KEM_768;
             }
+            else if (XSTRCMP(pqcAlg, "P256_ML_KEM_768") == 0) {
+                group = WOLFSSL_P256_ML_KEM_768;
+            }
             else
         #endif
         #ifndef WOLFSSL_NO_ML_KEM_1024
             if (XSTRCMP(pqcAlg, "P521_ML_KEM_1024") == 0) {
                 group = WOLFSSL_P521_ML_KEM_1024;
+            }
+            else if (XSTRCMP(pqcAlg, "P384_ML_KEM_1024") == 0) {
+                group = WOLFSSL_P384_ML_KEM_1024;
+            }
+            else
+        #endif
+        #if !defined(WOLFSSL_NO_ML_KEM_512) && defined(HAVE_CURVE25519)
+            if (XSTRCMP(pqcAlg, "X25519_ML_KEM_512") == 0) {
+                group = WOLFSSL_X25519_ML_KEM_512;
+            }
+            else
+        #endif
+        #if !defined(WOLFSSL_NO_ML_KEM_768) && defined(HAVE_CURVE25519)
+            if (XSTRCMP(pqcAlg, "X25519_ML_KEM_768") == 0) {
+                group = WOLFSSL_X25519_ML_KEM_768;
+            }
+            else
+        #endif
+        #if !defined(WOLFSSL_NO_ML_KEM_768) && defined(HAVE_CURVE448)
+            if (XSTRCMP(pqcAlg, "X448_ML_KEM_768") == 0) {
+                group = WOLFSSL_X448_ML_KEM_768;
             }
             else
         #endif
@@ -468,11 +492,32 @@ static void SetKeyShare(WOLFSSL* ssl, int onlyKeyShare, int useX25519,
             if (XSTRCMP(pqcAlg, "P384_KYBER_LEVEL3") == 0) {
                 group = WOLFSSL_P384_KYBER_LEVEL3;
             }
+            else if (XSTRCMP(pqcAlg, "P256_KYBER_LEVEL3") == 0) {
+                group = WOLFSSL_P256_KYBER_LEVEL3;
+            }
             else
         #endif
         #ifndef WOLFSSL_NO_KYBER1024
             if (XSTRCMP(pqcAlg, "P521_KYBER_LEVEL5") == 0) {
                 group = WOLFSSL_P521_KYBER_LEVEL5;
+            }
+            else
+        #endif
+        #if !defined(WOLFSSL_NO_KYBER512) && defined(HAVE_CURVE25519)
+            if (XSTRCMP(pqcAlg, "X25519_KYBER_LEVEL1") == 0) {
+                group = WOLFSSL_X25519_KYBER_LEVEL1;
+            }
+            else
+        #endif
+        #if !defined(WOLFSSL_NO_KYBER768) && defined(HAVE_CURVE25519)
+            if (XSTRCMP(pqcAlg, "X25519_KYBER_LEVEL3") == 0) {
+                group = WOLFSSL_X25519_KYBER_LEVEL3;
+            }
+            else
+        #endif
+        #if !defined(WOLFSSL_NO_KYBER768) && defined(HAVE_CURVE448)
+            if (XSTRCMP(pqcAlg, "X448_KYBER_LEVEL3") == 0) {
+                group = WOLFSSL_X448_KYBER_LEVEL3;
             }
             else
         #endif
