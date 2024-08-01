@@ -39,8 +39,14 @@
 
 #if defined (HAVE_LIBOQS)
     #include <oqs/kem.h>
-    #define EXT_KYBER_MAX_PRIV_SZ OQS_KEM_kyber_1024_length_secret_key
-    #define EXT_KYBER_MAX_PUB_SZ  OQS_KEM_kyber_1024_length_public_key
+
+    #ifdef OQS_ENABLE_KEM_ML_KEM
+        #define EXT_KYBER_MAX_PRIV_SZ OQS_KEM_ml_kem_1024_length_secret_key
+        #define EXT_KYBER_MAX_PUB_SZ  OQS_KEM_ml_kem_1024_length_public_key
+    #elif defined(OQS_ENABLE_KEM_KYBER)
+        #define EXT_KYBER_MAX_PRIV_SZ OQS_KEM_kyber_1024_length_secret_key
+        #define EXT_KYBER_MAX_PUB_SZ  OQS_KEM_kyber_1024_length_public_key
+    #endif
 #endif
 
 struct KyberKey {
