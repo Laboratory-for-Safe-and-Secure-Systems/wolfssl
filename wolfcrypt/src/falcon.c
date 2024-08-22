@@ -451,49 +451,6 @@ int wc_falcon_import_public(const byte* in, word32 inLen,
     return 0;
 }
 
-static int parse_private_key(const byte* priv, word32 privSz,
-                             byte** out, word32 *outSz,
-                             falcon_key* key) {
-    word32 idx = 0;
-    int ret = 0;
-    int length = 0;
-
-    /* sanity check on arguments */
-    if ((priv == NULL) || (key == NULL)) {
-        return BAD_FUNC_ARG;
-    }
-
-    if ((key->level != 1) && (key->level != 5)) {
-        return BAD_FUNC_ARG;
-    }
-
-    /* At this point, it is still a PKCS8 private key. */
-    if ((ret = ToTraditionalInline(priv, &idx, privSz)) < 0) {
-        /* ignore error, did not have PKCS8 header */
-        (void)ret;
-    }
-
-    /* Now it is a octet_string(concat(priv,pub)) */
-    if ((ret = GetOctetString(priv, &idx, &length, privSz)) < 0) {
-        return ret;
-    }
-
-    *out = (byte *)priv + idx;
-    *outSz = privSz - idx;
-
-    /* And finally it is concat(priv,pub). Key size check. */
-    if ((key->level == 1) && (*outSz != FALCON_LEVEL1_KEY_SIZE +
-                                       FALCON_LEVEL1_PUB_KEY_SIZE)) {
-        return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 5) && (*outSz != FALCON_LEVEL5_KEY_SIZE +
-                                            FALCON_LEVEL5_PUB_KEY_SIZE)) {
-        return BAD_FUNC_ARG;
-    }
-
-    return 0;
-}
-
 /* Import a falcon private key from a byte array.
  *
  * priv    [in]  Array holding private key.
@@ -506,16 +463,21 @@ static int parse_private_key(const byte* priv, word32 privSz,
 int wc_falcon_import_private_only(const byte* priv, word32 privSz,
                                  falcon_key* key)
 {
-    int ret = 0;
-    byte *newPriv = NULL;
-    word32 newPrivSz = 0;
-
-    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key))
-        != 0) {
-         return ret;
+    /* sanity check on arguments */
+    if ((priv == NULL) || (key == NULL)) {
+        return BAD_FUNC_ARG;
     }
 
-    XMEMCPY(key->k, newPriv, newPrivSz);
+    if ((key->level != 1) && (key->level != 5)) {
+        return BAD_FUNC_ARG;
+    }
+
+    if ((privSz != FALCON_LEVEL1_KEY_SIZE) &&
+            (privSz != FALCON_LEVEL5_KEY_SIZE)) {
+        return BAD_FUNC_ARG;
+    }
+
+    XMEMCPY(key->k, priv, privSz);
     key->prvKeySet = 1;
 
     return 0;
@@ -536,45 +498,37 @@ int wc_falcon_import_private_key(const byte* priv, word32 privSz,
                                         falcon_key* key)
 {
     int ret = 0;
-    byte *newPriv = NULL;
-    word32 newPrivSz = 0;
 
-    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key))
-        != 0) {
-         return ret;
+    /* Validate parameters. */
+    if ((priv == NULL) || (key == NULL)) {
+        ret = BAD_FUNC_ARG;
+    }
+    if ((pub == NULL) && (pubSz != 0)) {
+        ret = BAD_FUNC_ARG;
+    }
+    if ((ret == 0) && (key->level != 1) && (key->level != 5)) {
+        ret = BAD_FUNC_ARG;
     }
 
-    if (pub == NULL) {
-        if (pubSz != 0) {
-            return BAD_FUNC_ARG;
-        }
+    if ((ret == 0) && (pub != NULL)) {
+        /* Import public key. */
+        ret = wc_falcon_import_public(pub, pubSz, key);
 
-        if ((newPrivSz != FALCON_LEVEL1_PRV_KEY_SIZE) &&
-            (newPrivSz != FALCON_LEVEL5_PRV_KEY_SIZE)) {
-            return BAD_FUNC_ARG;
-        }
-
-        if (key->level == 1) {
-            pub = newPriv + FALCON_LEVEL1_KEY_SIZE;
-            pubSz = FALCON_LEVEL1_PUB_KEY_SIZE;
-        }
-        else if (key->level == 5) {
-            pub = newPriv + FALCON_LEVEL5_KEY_SIZE;
-            pubSz = FALCON_LEVEL5_PUB_KEY_SIZE;
+        if (ret == 0) {
+            /* Also copy the public key into the private key buffer, behind
+            * the actual private key. This is necessary for key checking. */
+            if (key->level == 1) {
+                XMEMCPY(key->k + FALCON_LEVEL1_KEY_SIZE, pub,
+                        FALCON_LEVEL1_PUB_KEY_SIZE);
+            }
+            else if (key->level == 5) {
+                XMEMCPY(key->k + FALCON_LEVEL5_KEY_SIZE, pub,
+                        FALCON_LEVEL5_PUB_KEY_SIZE);
+            }
         }
     }
-    else if ((pubSz != FALCON_LEVEL1_PUB_KEY_SIZE) &&
-             (pubSz != FALCON_LEVEL5_PUB_KEY_SIZE)) {
-        return BAD_FUNC_ARG;
-    }
-
-    /* import public key */
-    ret = wc_falcon_import_public(pub, pubSz, key);
-
     if (ret == 0) {
-        /* make the private key (priv + pub) */
-        XMEMCPY(key->k, newPriv, newPrivSz);
-        key->prvKeySet = 1;
+        ret = wc_falcon_import_private_only(priv, privSz, key);
     }
 
     return ret;
@@ -824,11 +778,13 @@ int wc_Falcon_PrivateKeyDecode(const byte* input, word32* inOutIdx,
                                      falcon_key* key, word32 inSz)
 {
     int ret = 0;
-    byte privKey[FALCON_MAX_PRV_KEY_SIZE], pubKey[FALCON_MAX_PUB_KEY_SIZE];
-    word32 privKeyLen = (word32)sizeof(privKey);
-    word32 pubKeyLen = (word32)sizeof(pubKey);
+    const byte* privKey = NULL;
+    const byte* pubKey = NULL;
+    word32 privKeyLen = 0;
+    word32 pubKeyLen = 0;
     int keytype = 0;
 
+    /* Validate parameters. */
     if (input == NULL || inOutIdx == NULL || key == NULL || inSz == 0) {
         return BAD_FUNC_ARG;
     }
@@ -840,18 +796,40 @@ int wc_Falcon_PrivateKeyDecode(const byte* input, word32* inOutIdx,
         keytype = FALCON_LEVEL5k;
     }
     else {
+        /* Level decoding from OID not supported at the moment */
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKey(input, inOutIdx, inSz, privKey, &privKeyLen,
-                        pubKey, &pubKeyLen, keytype);
+    if (ret == 0) {
+        /* Decode the asymmetric key and get out private and public key data. */
+        ret = DecodeAsymKey_Assign(input, inOutIdx, inSz, &privKey, &privKeyLen,
+            &pubKey, &pubKeyLen, &keytype);
+    }
+    if ((ret == 0) && (pubKey == NULL) && (pubKeyLen == 0)) {
+        /* Check if the public key is included in the private key. */
+        if ((key->level == 1) &&
+            (privKeyLen == FALCON_LEVEL1_PRV_KEY_SIZE)) {
+            pubKey = privKey + FALCON_LEVEL1_KEY_SIZE;
+            pubKeyLen = FALCON_LEVEL1_PUB_KEY_SIZE;
+            privKeyLen -= FALCON_LEVEL1_PUB_KEY_SIZE;
+        }
+        else if ((key->level == 5) &&
+                 (privKeyLen == FALCON_LEVEL5_PRV_KEY_SIZE)) {
+            pubKey = privKey + FALCON_LEVEL5_KEY_SIZE;
+            pubKeyLen = FALCON_LEVEL5_PUB_KEY_SIZE;
+            privKeyLen -= FALCON_LEVEL5_PUB_KEY_SIZE;
+        }
+    }
+
     if (ret == 0) {
         if (pubKeyLen == 0) {
-            ret = wc_falcon_import_private_key(input, inSz, NULL, 0, key);
+            /* No public key data, only import private key data. */
+            ret = wc_falcon_import_private_only(privKey, privKeyLen, key);
         }
         else {
-            ret = wc_falcon_import_private_key(input, inSz, pubKey,
-                                               pubKeyLen, key);
+            /* Import private and public key data. */
+            ret = wc_falcon_import_private_key(privKey, privKeyLen, pubKey,
+                pubKeyLen, key);
         }
     }
     return ret;
