@@ -29800,9 +29800,10 @@ int DecodePrivateKey(WOLFSSL *ssl, word32* length)
         /* Set start of data to beginning of buffer. */
         idx = 0;
         /* Decode the key assuming it is a Falcon private key. */
-        ret = wc_falcon_import_private_only(ssl->buffers.key->buffer,
-                                            ssl->buffers.key->length,
-                                            (falcon_key*)ssl->hsKey);
+        ret = wc_Falcon_PrivateKeyDecode(ssl->buffers.key->buffer,
+                                         &idx,
+                                         (falcon_key*)ssl->hsKey,
+                                         ssl->buffers.key->length);
         if (ret == 0) {
             WOLFSSL_MSG("Using Falcon private key");
 
@@ -30287,9 +30288,10 @@ int DecodeAltPrivateKey(WOLFSSL *ssl, word32* length)
         /* Set start of data to beginning of buffer. */
         idx = 0;
         /* Decode the key assuming it is a Falcon private key. */
-        ret = wc_falcon_import_private_only(ssl->buffers.altKey->buffer,
-                                            ssl->buffers.altKey->length,
-                                            (falcon_key*)ssl->hsAltKey);
+        ret = wc_Falcon_PrivateKeyDecode(ssl->buffers.altKey->buffer,
+                                         &idx,
+                                         (falcon_key*)ssl->hsAltKey,
+                                         ssl->buffers.altKey->length);
         if (ret == 0) {
             WOLFSSL_MSG("Using Falcon private key");
 

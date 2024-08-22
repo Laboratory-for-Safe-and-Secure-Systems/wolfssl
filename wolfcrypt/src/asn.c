@@ -25470,8 +25470,9 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
                 header = BEGIN_ENC_PRIV_KEY;
                 footer = END_ENC_PRIV_KEY;
             }
+    #define HEADER_LAST BEGIN_ENC_PRIV_KEY
 #ifdef HAVE_ECC
-            else if (header == BEGIN_ENC_PRIV_KEY) {
+            else if (header == HEADER_LAST) {
                 header = BEGIN_EC_PRIV;
                 footer = END_EC_PRIV;
             }
@@ -25479,16 +25480,60 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
                 header = BEGIN_DSA_PRIV;
                 footer = END_DSA_PRIV;
             }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_DSA_PRIV
 #endif
 #if defined(HAVE_ED25519) || defined(HAVE_ED448)
-    #ifdef HAVE_ECC
-            else if (header == BEGIN_DSA_PRIV) {
-    #else
-            else if (header == BEGIN_ENC_PRIV_KEY) {
-    #endif
+            else if (header == HEADER_LAST) {
                 header = BEGIN_EDDSA_PRIV;
                 footer = END_EDDSA_PRIV;
             }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_EDDSA_PRIV
+#endif
+#if defined(HAVE_DILITHIUM)
+    #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+            else if (header == HEADER_LAST) {
+                header = BEGIN_DILITHIUM_LEVEL2_PRIV;
+                footer = END_DILITHIUM_LEVEL2_PRIV;
+            }
+            else if (header == BEGIN_DILITHIUM_LEVEL2_PRIV) {
+                header = BEGIN_DILITHIUM_LEVEL3_PRIV;
+                footer = END_DILITHIUM_LEVEL3_PRIV;
+            }
+            else if (header == BEGIN_DILITHIUM_LEVEL3_PRIV) {
+                header = BEGIN_DILITHIUM_LEVEL5_PRIV;
+                footer = END_DILITHIUM_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_DILITHIUM_LEVEL5_PRIV
+    #endif /* WOLFSSL_DILITHIUM_FIPS204_DRAFT */
+            else if (header == HEADER_LAST) {
+                header = BEGIN_ML_DSA_LEVEL2_PRIV;
+                footer = END_ML_DSA_LEVEL2_PRIV;
+            }
+            else if (header == BEGIN_ML_DSA_LEVEL2_PRIV) {
+                header = BEGIN_ML_DSA_LEVEL3_PRIV;
+                footer = END_ML_DSA_LEVEL3_PRIV;
+            }
+            else if (header == BEGIN_ML_DSA_LEVEL3_PRIV) {
+                header = BEGIN_ML_DSA_LEVEL5_PRIV;
+                footer = END_ML_DSA_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_ML_DSA_LEVEL5_PRIV
+#endif
+#if defined(HAVE_FALCON)
+            else if (header == HEADER_LAST) {
+                header = BEGIN_FALCON_LEVEL1_PRIV;
+                footer = END_FALCON_LEVEL1_PRIV;
+            }
+            else if (header == BEGIN_FALCON_LEVEL1_PRIV) {
+                header = BEGIN_FALCON_LEVEL5_PRIV;
+                footer = END_FALCON_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_FALCON_LEVEL5_PRIV
 #endif
             else {
             #ifdef WOLF_PRIVATE_KEY_ID
@@ -25701,6 +25746,20 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
 #endif
 #ifdef HAVE_ECC
          || header == BEGIN_EC_PRIV
+#endif
+#ifdef HAVE_DILITHIUM
+    #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+         || header == BEGIN_DILITHIUM_LEVEL2_PRIV
+         || header == BEGIN_DILITHIUM_LEVEL3_PRIV
+         || header == BEGIN_DILITHIUM_LEVEL5_PRIV
+    #endif
+         || header == BEGIN_ML_DSA_LEVEL2_PRIV
+         || header == BEGIN_ML_DSA_LEVEL3_PRIV
+         || header == BEGIN_ML_DSA_LEVEL5_PRIV
+#endif
+#ifdef HAVE_FALCON
+         || header == BEGIN_FALCON_LEVEL1_PRIV
+         || header == BEGIN_FALCON_LEVEL5_PRIV
 #endif
         ) && !encrypted_key)
     {
@@ -35762,11 +35821,17 @@ int wc_Ed25519PublicKeyDecode(const byte* input, word32* inOutIdx,
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
-        pubKey, &pubKeyLen, ED25519k);
-    if (ret == 0) {
-        ret = wc_ed25519_import_public(pubKey, pubKeyLen, key);
+    /* Try to import the key directly. */
+    ret = wc_ed25519_import_public(input, inSz, key);
+    if (ret != 0) {
+        /* Start again with decoding the data first */
+        ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
+                    pubKey, &pubKeyLen, ED25519k);
+        if (ret == 0) {
+            ret = wc_ed25519_import_public(pubKey, pubKeyLen, key);
+        }
     }
+
     return ret;
 }
 #endif /* HAVE_ED25519 && HAVE_ED25519_KEY_IMPORT */
@@ -36164,11 +36229,17 @@ int wc_Ed448PublicKeyDecode(const byte* input, word32* inOutIdx,
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
-        pubKey, &pubKeyLen, ED448k);
-    if (ret == 0) {
-        ret = wc_ed448_import_public(pubKey, pubKeyLen, key);
+    /* Try to import the key directly. */
+    ret = wc_ed448_import_public(input, inSz, key);
+    if (ret != 0) {
+        /* Start again with decoding the data first */
+        ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
+                    pubKey, &pubKeyLen, ED448k);
+        if (ret == 0) {
+            ret = wc_ed448_import_public(pubKey, pubKeyLen, key);
+        }
     }
+
     return ret;
 }
 #endif /* HAVE_ED448 && HAVE_ED448_KEY_IMPORT */
