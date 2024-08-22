@@ -25370,8 +25370,9 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
                 header = BEGIN_ENC_PRIV_KEY;
                 footer = END_ENC_PRIV_KEY;
             }
+    #define HEADER_LAST BEGIN_ENC_PRIV_KEY
 #ifdef HAVE_ECC
-            else if (header == BEGIN_ENC_PRIV_KEY) {
+            else if (header == HEADER_LAST) {
                 header = BEGIN_EC_PRIV;
                 footer = END_EC_PRIV;
             }
@@ -25379,16 +25380,44 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
                 header = BEGIN_DSA_PRIV;
                 footer = END_DSA_PRIV;
             }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_DSA_PRIV
 #endif
 #if defined(HAVE_ED25519) || defined(HAVE_ED448)
-    #ifdef HAVE_ECC
-            else if (header == BEGIN_DSA_PRIV) {
-    #else
-            else if (header == BEGIN_ENC_PRIV_KEY) {
-    #endif
+            else if (header == HEADER_LAST) {
                 header = BEGIN_EDDSA_PRIV;
                 footer = END_EDDSA_PRIV;
             }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_EDDSA_PRIV
+#endif
+#if defined(HAVE_DILITHIUM)
+            else if (header == HEADER_LAST) {
+                header = BEGIN_DILITHIUM_LEVEL2_PRIV;
+                footer = END_DILITHIUM_LEVEL2_PRIV;
+            }
+            else if (header == BEGIN_DILITHIUM_LEVEL2_PRIV) {
+                header = BEGIN_DILITHIUM_LEVEL3_PRIV;
+                footer = END_DILITHIUM_LEVEL3_PRIV;
+            }
+            else if (header == BEGIN_DILITHIUM_LEVEL3_PRIV) {
+                header = BEGIN_DILITHIUM_LEVEL5_PRIV;
+                footer = END_DILITHIUM_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_DILITHIUM_LEVEL5_PRIV
+#endif
+#if defined(HAVE_FALCON)
+            else if (header == HEADER_LAST) {
+                header = BEGIN_FALCON_LEVEL1_PRIV;
+                footer = END_FALCON_LEVEL1_PRIV;
+            }
+            else if (header == BEGIN_FALCON_LEVEL1_PRIV) {
+                header = BEGIN_FALCON_LEVEL5_PRIV;
+                footer = END_FALCON_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_FALCON_LEVEL5_PRIV
 #endif
             else {
             #ifdef WOLF_PRIVATE_KEY_ID
@@ -25601,6 +25630,15 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
 #endif
 #ifdef HAVE_ECC
          || header == BEGIN_EC_PRIV
+#endif
+#ifdef HAVE_DILITHIUM
+         || header == BEGIN_DILITHIUM_LEVEL2_PRIV
+         || header == BEGIN_DILITHIUM_LEVEL3_PRIV
+         || header == BEGIN_DILITHIUM_LEVEL5_PRIV
+#endif
+#ifdef HAVE_FALCON
+         || header == BEGIN_FALCON_LEVEL1_PRIV
+         || header == BEGIN_FALCON_LEVEL5_PRIV
 #endif
         ) && !encrypted_key)
     {
