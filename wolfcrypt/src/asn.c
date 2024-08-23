@@ -35410,11 +35410,17 @@ int wc_Ed25519PublicKeyDecode(const byte* input, word32* inOutIdx,
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
-        pubKey, &pubKeyLen, ED25519k);
-    if (ret == 0) {
-        ret = wc_ed25519_import_public(pubKey, pubKeyLen, key);
+    /* Try to import the key directly. */
+    ret = wc_ed25519_import_public(input, inSz, key);
+    if (ret != 0) {
+        /* Start again with decoding the data first */
+        ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
+                    pubKey, &pubKeyLen, ED25519k);
+        if (ret == 0) {
+            ret = wc_ed25519_import_public(pubKey, pubKeyLen, key);
+        }
     }
+
     return ret;
 }
 #endif /* HAVE_ED25519 && HAVE_ED25519_KEY_IMPORT */
@@ -35704,11 +35710,17 @@ int wc_Ed448PublicKeyDecode(const byte* input, word32* inOutIdx,
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
-        pubKey, &pubKeyLen, ED448k);
-    if (ret == 0) {
-        ret = wc_ed448_import_public(pubKey, pubKeyLen, key);
+    /* Try to import the key directly. */
+    ret = wc_ed448_import_public(input, inSz, key);
+    if (ret != 0) {
+        /* Start again with decoding the data first */
+        ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
+                    pubKey, &pubKeyLen, ED448k);
+        if (ret == 0) {
+            ret = wc_ed448_import_public(pubKey, pubKeyLen, key);
+        }
     }
+
     return ret;
 }
 #endif /* HAVE_ED448 && HAVE_ED448_KEY_IMPORT */
