@@ -8014,8 +8014,8 @@ int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg,
         if (key->devId != INVALID_DEVID)
     #endif
         {
-            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, rng,
-                WC_PQC_SIG_TYPE_DILITHIUM, key);
+            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, ctx, ctxLen,
+                    WC_HASH_TYPE_NONE, rng, WC_PQC_SIG_TYPE_DILITHIUM, key);
             if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
                 return ret;
             /* fall-through when unavailable */
@@ -8065,8 +8065,8 @@ int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
         if (key->devId != INVALID_DEVID)
     #endif
         {
-            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, rng,
-                WC_PQC_SIG_TYPE_DILITHIUM, key);
+            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, NULL, 0,
+                    WC_HASH_TYPE_NONE, rng, WC_PQC_SIG_TYPE_DILITHIUM, key);
             if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
                 return ret;
             /* fall-through when unavailable */
@@ -8116,6 +8116,22 @@ int wc_dilithium_sign_ctx_hash(const byte* ctx, byte ctxLen, int hashAlg,
     if ((ret == 0) && (ctx == NULL) && (ctxLen > 0)) {
         ret = BAD_FUNC_ARG;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_PqcSign(hash, hashLen, sig, sigLen, ctx, ctxLen,
+                    hashAlg, rng, WC_PQC_SIG_TYPE_DILITHIUM, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
 
     if (ret == 0) {
         /* Sign message. */
@@ -8291,6 +8307,22 @@ int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx,
         ret = BAD_FUNC_ARG;
     }
 
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, ctx, ctxLen,
+                    WC_HASH_TYPE_NONE, res, WC_PQC_SIG_TYPE_DILITHIUM, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
+
     if (ret == 0) {
         /* Verify message with signature. */
     #ifdef WOLFSSL_WC_DILITHIUM
@@ -8329,21 +8361,21 @@ int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
         ret = BAD_FUNC_ARG;
     }
 
-    #ifdef WOLF_CRYPTO_CB
+#ifdef WOLF_CRYPTO_CB
     if (ret == 0) {
-        #ifndef WOLF_CRYPTO_CB_FIND
+    #ifndef WOLF_CRYPTO_CB_FIND
         if (key->devId != INVALID_DEVID)
-        #endif
+    #endif
         {
-            ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, res,
-                WC_PQC_SIG_TYPE_DILITHIUM, key);
+            ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, NULL, 0,
+                    WC_HASH_TYPE_NONE, res, WC_PQC_SIG_TYPE_DILITHIUM, key);
             if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
                 return ret;
             /* fall-through when unavailable */
             ret = 0;
         }
     }
-    #endif
+#endif
 
     if (ret == 0) {
         /* Verify message with signature. */
@@ -8386,6 +8418,22 @@ int wc_dilithium_verify_ctx_hash(const byte* sig, word32 sigLen,
     if ((ret == 0) && (ctx == NULL) && (ctxLen > 0)) {
         ret = BAD_FUNC_ARG;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_PqcVerify(sig, sigLen, hash, hashLen, ctx, ctxLen,
+                    hashAlg, res, WC_PQC_SIG_TYPE_DILITHIUM, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
 
     if (ret == 0) {
         /* Verify message with signature. */
