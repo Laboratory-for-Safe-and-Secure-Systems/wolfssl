@@ -6906,6 +6906,7 @@ static int dilithium_sign_ctx_msg(dilithium_key* key, WC_RNG* rng,
 }
 #endif
 
+#ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
 /* Sign a message with the key and a random number generator.
  *
  * FIPS 204. 5.2: Algorithm 2 ML-DSA.Sign(sk, M, ctx)
@@ -6966,6 +6967,7 @@ static int dilithium_sign_msg(dilithium_key* key, WC_RNG* rng,
 
     return ret;
 }
+#endif
 
 #ifndef WOLFSSL_DILITHIUM_FIPS204_DRAFT
 /* Sign a pre-hashed message with the key and a seed.
@@ -7601,6 +7603,7 @@ static int dilithium_verify_ctx_msg(dilithium_key* key, const byte* ctx,
 }
 #endif
 
+#ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
 /* Verify signature of message using public key.
  *
  * @param [in, out] key     Dilithium key.
@@ -7643,6 +7646,7 @@ static int dilithium_verify_msg(dilithium_key* key, const byte* msg,
 
     return ret;
 }
+#endif
 
 #ifndef WOLFSSL_DILITHIUM_FIPS204_DRAFT
 /* Verify signature of message using public key.
@@ -7980,8 +7984,8 @@ int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg,
         if (key->devId != INVALID_DEVID)
     #endif
         {
-            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, rng,
-                WC_PQC_SIG_TYPE_DILITHIUM, key);
+            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, ctx, ctxLen,
+                    WC_HASH_TYPE_NONE, rng, WC_PQC_SIG_TYPE_DILITHIUM, key);
             if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
                 return ret;
             /* fall-through when unavailable */
@@ -8002,7 +8006,28 @@ int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg,
 
     return ret;
 }
-#endif
+
+/* Sign the message using the dilithium private key. The context field is set
+ * to the empty string.
+ *
+ *  msg         [in]      Message to sign.
+ *  msgLen      [in]      Length of the message in bytes.
+ *  sig         [out]     Buffer to write signature into.
+ *  sigLen      [in/out]  On in, size of buffer.
+ *                        On out, the length of the signature in bytes.
+ *  key         [in]      Dilithium key to use when signing
+ *  returns BAD_FUNC_ARG when a parameter is NULL or public key not set,
+ *          BUFFER_E when outLen is less than DILITHIUM_LEVEL2_SIG_SIZE,
+ *          0 otherwise.
+ */
+int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
+    word32 *sigLen, dilithium_key* key, WC_RNG* rng)
+{
+    return wc_dilithium_sign_ctx_msg(NULL, 0, msg, msgLen, sig, sigLen, key,
+        rng);
+}
+
+#else /* WOLFSSL_DILITHIUM_FIPS204_DRAFT */
 
 /* Sign the message using the dilithium private key.
  *
@@ -8032,8 +8057,8 @@ int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
         if (key->devId != INVALID_DEVID)
     #endif
         {
-            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, rng,
-                WC_PQC_SIG_TYPE_DILITHIUM, key);
+            ret = wc_CryptoCb_PqcSign(msg, msgLen, sig, sigLen, NULL, 0,
+                    WC_HASH_TYPE_NONE, rng, WC_PQC_SIG_TYPE_DILITHIUM, key);
             if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
                 return ret;
             /* fall-through when unavailable */
@@ -8053,6 +8078,7 @@ int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
 
     return ret;
 }
+#endif /* WOLFSSL_DILITHIUM_FIPS204_DRAFT*/
 
 #ifndef WOLFSSL_DILITHIUM_FIPS204_DRAFT
 /* Sign the message hash using the dilithium private key.
@@ -8084,6 +8110,22 @@ int wc_dilithium_sign_ctx_hash(const byte* ctx, byte ctxLen, int hashAlg,
     if ((ret == 0) && (ctx == NULL) && (ctxLen > 0)) {
         ret = BAD_FUNC_ARG;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_PqcSign(hash, hashLen, sig, sigLen, ctx, ctxLen,
+                    hashAlg, rng, WC_PQC_SIG_TYPE_DILITHIUM, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
 
     if (ret == 0) {
         /* Sign message. */
@@ -8263,6 +8305,22 @@ int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx,
         ret = BAD_FUNC_ARG;
     }
 
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, ctx, ctxLen,
+                    WC_HASH_TYPE_NONE, res, WC_PQC_SIG_TYPE_DILITHIUM, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
+
     if (ret == 0) {
         /* Verify message with signature. */
     #ifdef WOLFSSL_WC_DILITHIUM
@@ -8278,7 +8336,28 @@ int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx,
 
     return ret;
 }
-#endif
+
+/* Verify the message using the dilithium public key. The context field is set
+ * to the empty string.
+ *
+ *  sig         [in]  Signature to verify.
+ *  sigLen      [in]  Size of signature in bytes.
+ *  msg         [in]  Message to verify.
+ *  msgLen      [in]  Length of the message in bytes.
+ *  res         [out] *res is set to 1 on successful verification.
+ *  key         [in]  Dilithium key to use to verify.
+ *  returns BAD_FUNC_ARG when a parameter is NULL or contextLen is zero when and
+ *          BUFFER_E when sigLen is less than DILITHIUM_LEVEL2_SIG_SIZE,
+ *          0 otherwise.
+ */
+int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
+    word32 msgLen, int* res, dilithium_key* key)
+{
+    return wc_dilithium_verify_ctx_msg(sig, sigLen, NULL, 0, msg, msgLen, res,
+        key);
+}
+
+#else /* WOLFSSL_DILITHIUM_FIPS204_DRAFT */
 
 /* Verify the message using the dilithium public key.
  *
@@ -8302,21 +8381,21 @@ int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
         ret = BAD_FUNC_ARG;
     }
 
-    #ifdef WOLF_CRYPTO_CB
+#ifdef WOLF_CRYPTO_CB
     if (ret == 0) {
-        #ifndef WOLF_CRYPTO_CB_FIND
+    #ifndef WOLF_CRYPTO_CB_FIND
         if (key->devId != INVALID_DEVID)
-        #endif
+    #endif
         {
-            ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, res,
-                WC_PQC_SIG_TYPE_DILITHIUM, key);
+            ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, NULL, 0,
+                    WC_HASH_TYPE_NONE, res, WC_PQC_SIG_TYPE_DILITHIUM, key);
             if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
                 return ret;
             /* fall-through when unavailable */
             ret = 0;
         }
     }
-    #endif
+#endif
 
     if (ret == 0) {
         /* Verify message with signature. */
@@ -8329,6 +8408,7 @@ int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
 
     return ret;
 }
+#endif /* WOLFSSL_DILITHIUM_FIPS204_DRAFT */
 
 #ifndef WOLFSSL_DILITHIUM_FIPS204_DRAFT
 /* Verify the message using the dilithium public key.
@@ -8360,6 +8440,22 @@ int wc_dilithium_verify_ctx_hash(const byte* sig, word32 sigLen,
     if ((ret == 0) && (ctx == NULL) && (ctxLen > 0)) {
         ret = BAD_FUNC_ARG;
     }
+
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_PqcVerify(sig, sigLen, hash, hashLen, ctx, ctxLen,
+                    hashAlg, res, WC_PQC_SIG_TYPE_DILITHIUM, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
 
     if (ret == 0) {
         /* Verify message with signature. */
