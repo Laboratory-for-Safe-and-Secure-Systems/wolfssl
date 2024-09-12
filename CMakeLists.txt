@@ -560,7 +560,12 @@ add_option(WOLFSSL_OQS
 
 # Kyber
 add_option(WOLFSSL_KYBER
-    "Enable the wolfSSL PQ Kyber library (default: disabled)"
+    "Enable the wolfSSL PQ Kyber (ML-KEM) implementation (default: disabled)"
+    "no" "yes;no")
+
+# Dilithium
+add_option(WOLFSSL_DILITHIUM
+    "Enable the wolfSSL PQ Dilithium (ML-DSA) implementation (default: disabled)"
     "no" "yes;no")
 
 # Experimental features
@@ -619,6 +624,22 @@ if (WOLFSSL_EXPERIMENTAL)
         message(STATUS "Looking for WOLFSSL_KYBER - not found")
     endif()
 
+    # Checking for experimental feature: Dilithium
+    message(STATUS "Looking for WOLFSSL_DILITHIUM")
+    if (WOLFSSL_DILITHIUM)
+        set(WOLFSSL_FOUND_EXPERIMENTAL_FEATURE 1)
+
+        message(STATUS "Automatically set related requirements for Dilithium:")
+        set_wolfssl_definitions("HAVE_DILITHIUM"       RESUlT)
+        set_wolfssl_definitions("WOLFSSL_WC_DILITHIUM" RESUlT)
+        set_wolfssl_definitions("WOLFSSL_SHA3"       RESUlT)
+        set_wolfssl_definitions("WOLFSSL_SHAKE128"   RESUlT)
+        set_wolfssl_definitions("WOLFSSL_SHAKE256"   RESUlT)
+        message(STATUS "Looking for WOLFSSL_DILITHIUM - found")
+    else()
+        message(STATUS "Looking for WOLFSSL_DILITHIUM - not found")
+    endif()
+
     # Other experimental feature detection can be added here...
 
     # Were any experimental features found? Display a message.
@@ -632,7 +653,9 @@ if (WOLFSSL_EXPERIMENTAL)
     if(WOLFSSL_OQS AND WOLFSSL_KYBER)
         message(FATAL_ERROR "Error: cannot enable both WOLFSSL_OQS and WOLFSSL_KYBER at the same time.")
     endif()
-
+    if(WOLFSSL_OQS AND WOLFSSL_DILITHIUM)
+        message(FATAL_ERROR "Error: cannot enable both WOLFSSL_OQS and WOLFSSL_DILITHIUM at the same time.")
+    endif()
 else()
     # Experimental mode not enabled, but were any experimental features enabled? Error out if so:
     message(STATUS "Looking for WOLFSSL_EXPERIMENTAL - not found")
@@ -641,6 +664,9 @@ else()
     endif()
     if(WOLFSSL_KYBER)
         message(FATAL_ERROR "Error: WOLFSSL_KYBER requires WOLFSSL_EXPERIMENTAL at this time.")
+    endif()
+    if(WOLFSSL_DILITHIUM)
+        message(FATAL_ERROR "Error: WOLFSSL_DILITHIUM requires WOLFSSL_EXPERIMENTAL at this time.")
     endif()
 endif()
 
