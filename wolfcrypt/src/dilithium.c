@@ -9854,13 +9854,13 @@ static int oqs_dilithium_make_key(dilithium_key* key, WC_RNG* rng)
     OQS_SIG *oqssig = NULL;
 
     if (key->level == WC_ML_DSA_44) {
-        oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44_ipd);
+        oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44);
     }
     else if (key->level == WC_ML_DSA_65) {
-        oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65_ipd);
+        oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65);
     }
     else if (key->level == WC_ML_DSA_87) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87);
     }
     else {
         ret = SIG_TYPE_E;
@@ -9902,13 +9902,13 @@ static int oqs_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
 
     if (ret == 0) {
         if (key->level == WC_ML_DSA_44) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44);
         }
         else if (key->level == WC_ML_DSA_65) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65);
         }
         else if (key->level == WC_ML_DSA_87) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87);
         }
         else {
             ret = SIG_TYPE_E;
@@ -9960,9 +9960,128 @@ static int oqs_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
     }
     return ret;
 }
+
+static int oqs_dilithium_sign_ctx_msg(const byte* msg, word32 msgLen, byte* sig,
+    word32 *sigLen, const byte* ctx, word32 ctxLen,  dilithium_key* key,
+    WC_RNG* rng)
+{
+    int ret = 0;
+    OQS_SIG *oqssig = NULL;
+    size_t localOutLen = 0;
+
+    if (!key->prvKeySet) {
+        ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        if (key->level == WC_ML_DSA_44) {
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44);
+        }
+        else if (key->level == WC_ML_DSA_65) {
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65);
+        }
+        else if (key->level == WC_ML_DSA_87) {
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87);
+        }
+        else {
+            ret = SIG_TYPE_E;
+        }
+    }
+
+    if ((ret == 0) && (oqssig == NULL)) {
+        ret = BUFFER_E;
+    }
+
+    /* check and set up out length */
+    if (ret == 0) {
+        if ((key->level == WC_ML_DSA_44) &&
+                (*sigLen < ML_DSA_LEVEL2_SIG_SIZE)) {
+            *sigLen = ML_DSA_LEVEL2_SIG_SIZE;
+            ret = BUFFER_E;
+        }
+        else if ((key->level == WC_ML_DSA_65) &&
+                 (*sigLen < ML_DSA_LEVEL3_SIG_SIZE)) {
+            *sigLen = ML_DSA_LEVEL3_SIG_SIZE;
+            ret = BUFFER_E;
+        }
+        else if ((key->level == WC_ML_DSA_87) &&
+                 (*sigLen < ML_DSA_LEVEL5_SIG_SIZE)) {
+            *sigLen = ML_DSA_LEVEL5_SIG_SIZE;
+            ret = BUFFER_E;
+        }
+        localOutLen = *sigLen;
+    }
+
+    if (ret == 0) {
+        ret = wolfSSL_liboqsRngMutexLock(rng);
+    }
+
+    if ((ret == 0) &&
+        (OQS_SIG_sign_with_ctx_str(oqssig, sig, &localOutLen, msg, msgLen, ctx, ctxLen, key->k)
+         == OQS_ERROR)) {
+        ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        *sigLen = (word32)localOutLen;
+    }
+
+    wolfSSL_liboqsRngMutexUnlock();
+
+    if (oqssig != NULL) {
+        OQS_SIG_free(oqssig);
+    }
+    return ret;
+}
 #endif
 
 #ifndef WOLFSSL_DILITHIUM_NO_VERIFY
+static int oqs_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen,
+    const byte* msg, word32 msgLen, const byte* ctx, word32 ctxLen,
+    int* res, dilithium_key* key)
+{
+    int ret = 0;
+    OQS_SIG *oqssig = NULL;
+
+    if (!key->pubKeySet) {
+        ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        if (key->level == WC_ML_DSA_44) {
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44);
+        }
+        else if (key->level == WC_ML_DSA_65) {
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65);
+        }
+        else if (key->level == WC_ML_DSA_87) {
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87);
+        }
+        else {
+            ret = SIG_TYPE_E;
+        }
+    }
+
+    if ((ret == 0) && (oqssig == NULL)) {
+        ret = BUFFER_E;
+    }
+
+    if ((ret == 0) &&
+        (OQS_SIG_verify_with_ctx_str(oqssig, msg, msgLen, sig, sigLen, ctx, ctxLen, key->p)
+         == OQS_ERROR)) {
+         ret = SIG_VERIFY_E;
+    }
+
+    if (ret == 0) {
+        *res = 1;
+    }
+
+    if (oqssig != NULL) {
+        OQS_SIG_free(oqssig);
+    }
+    return ret;
+}
+
 static int oqs_dilithium_verify_msg(const byte* sig, word32 sigLen,
     const byte* msg, word32 msgLen, int* res, dilithium_key* key)
 {
@@ -9975,13 +10094,13 @@ static int oqs_dilithium_verify_msg(const byte* sig, word32 sigLen,
 
     if (ret == 0) {
         if (key->level == WC_ML_DSA_44) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_44);
         }
         else if (key->level == WC_ML_DSA_65) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_65);
         }
         else if (key->level == WC_ML_DSA_87) {
-            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87_ipd);
+            oqssig = OQS_SIG_new(OQS_SIG_alg_ml_dsa_87);
         }
         else {
             ret = SIG_TYPE_E;
@@ -10138,7 +10257,7 @@ int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg,
         ret = dilithium_sign_ctx_msg(key, rng, ctx, ctxLen, msg, msgLen, sig,
             sigLen);
     #elif defined(HAVE_LIBOQS)
-        ret = oqs_dilithium_sign_msg(msg, msgLen, sig, sigLen, key, rng);
+        ret = oqs_dilithium_sign_ctx_msg(msg, msgLen, sig, sigLen, ctx, ctxLen, key, rng);
     #endif
     }
 
@@ -10437,10 +10556,8 @@ int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx,
         ret = dilithium_verify_ctx_msg(key, ctx, ctxLen, msg, msgLen, sig,
             sigLen, res);
     #elif defined(HAVE_LIBOQS)
-        ret = NOT_COMPILED_IN;
-        (void)sigLen;
-        (void)msgLen;
-        (void)res;
+        ret = oqs_dilithium_verify_ctx_msg(sig, sigLen, msg, msgLen,
+            ctx, ctxLen, res, key);
     #endif
     }
 

@@ -285,7 +285,7 @@ struct wc_PKCS7 {
     int devId;                    /* device ID for HW based private key   */
     byte issuerHash[KEYID_SIZE];  /* hash of all alt Names                */
     byte issuerSn[MAX_SN_SZ];     /* singleCert's serial number           */
-    byte publicKey[MAX_RSA_INT_SZ + MAX_RSA_E_SZ]; /* MAX RSA key size (m + e)*/
+    byte publicKey[MAX_PUBLIC_KEY_SZ]; /* MAX public key size             */
     word32 certSz[MAX_PKCS7_CERTS];
 
      /* flags - up to 16-bits */

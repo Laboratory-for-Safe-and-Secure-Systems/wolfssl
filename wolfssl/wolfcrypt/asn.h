@@ -1133,7 +1133,6 @@ enum Misc_ASN {
     MIN_DATE_SIZE       =  12,
     MAX_DATE_SIZE       =  32,
     ASN_GEN_TIME_SZ     =  15,     /* 7 numbers * 2 + Zulu tag */
-
 #ifdef WOLFSSL_CERT_GEN
     #ifdef WOLFSSL_CERT_REQ
                           /* Max encoded cert req attributes length */
@@ -2373,8 +2372,8 @@ WOLFSSL_LOCAL int StoreDHparams(byte* out, word32* outLen, mp_int* p, mp_int* g)
 WOLFSSL_API int wc_DhPublicKeyDecode(const byte* input, word32* inOutIdx,
                         DhKey* key, word32 inSz);
 #endif
-WOLFSSL_LOCAL int FlattenAltNames(byte* output, word32 outputSz,
-                                  const DNS_entry* names);
+WOLFSSL_ASN_API int FlattenAltNames(byte* output, word32 outputSz,
+                                    const DNS_entry* names);
 
 WOLFSSL_LOCAL int wc_EncodeName(EncodedName* name, const char* nameStr,
         char nameType, byte type);
