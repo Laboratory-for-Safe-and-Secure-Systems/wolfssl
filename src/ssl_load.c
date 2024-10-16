@@ -814,6 +814,7 @@ static int ProcessBufferTryDecodeFalcon(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     DerBuffer* der, int* keyFormat, void* heap, byte* keyType, int* keySize)
 {
     int ret;
+    word32 idx;
     falcon_key* key;
 
     /* Allocate a Falcon key to parse into. */

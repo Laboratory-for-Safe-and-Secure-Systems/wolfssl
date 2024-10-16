@@ -101,6 +101,9 @@ struct falcon_key {
 /* Functions */
 
 WOLFSSL_API
+int wc_falcon_make_key(falcon_key* key, WC_RNG* rng);
+
+WOLFSSL_API
 int wc_falcon_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
                        falcon_key* key, WC_RNG* rng);
 WOLFSSL_API

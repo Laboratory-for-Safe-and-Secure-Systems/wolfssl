@@ -2666,6 +2666,9 @@ extern void uITRON4_free(void *p) ;
         extern "C" {
     #endif
 
+    #define WOLFSSL_HAVE_MAX
+    #define WOLFSSL_HAVE_MIN
+
     #define WOLFSSL_DH_CONST
     #define NO_WRITEV
     #define NO_STDLIB_ISASCII
