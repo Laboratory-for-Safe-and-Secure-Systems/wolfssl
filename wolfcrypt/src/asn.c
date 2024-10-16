@@ -4231,11 +4231,11 @@ static word32 SetBitString16Bit(word16 val, byte* output)
     static const byte sigEd448Oid[] = {43, 101, 113};
 #endif /* HAVE_ED448 */
 #ifdef HAVE_FALCON
-    /* Falcon Level 1: 1 3 9999 3 6 */
-    static const byte sigFalcon_Level1Oid[] = {43, 206, 15, 3, 6};
+    /* Falcon Level 1: 1.3.9999.3.11 */
+    static const byte sigFalcon_Level1Oid[] = {43, 206, 15, 3, 11};
 
-    /* Falcon Level 5: 1 3 9999 3 9 */
-    static const byte sigFalcon_Level5Oid[] = {43, 206, 15, 3, 9};
+    /* Falcon Level 5: 1.3.9999.3.14 */
+    static const byte sigFalcon_Level5Oid[] = {43, 206, 15, 3, 14};
 #endif /* HAVE_FACON */
 #ifdef HAVE_DILITHIUM
 #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
@@ -4265,29 +4265,29 @@ static word32 SetBitString16Bit(word16 val, byte* output)
         {96, 134, 72, 1, 101, 3, 4, 3, 19};
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
-    /* Sphincs Fast Level 1: 1 3 9999 6 7 4 */
+    /* Sphincs Fast Level 1: 1.3.9999.6.7.13 */
     static const byte sigSphincsFast_Level1Oid[] =
-        {43, 206, 15, 6, 7, 4};
+        {43, 206, 15, 6, 7, 13};
 
-    /* Sphincs Fast Level 3: 1 3 9999 6 8 3 */
+    /* Sphincs Fast Level 3: 1.3.9999.6.8.10 */
     static const byte sigSphincsFast_Level3Oid[] =
-        {43, 206, 15, 6, 8, 3};
+        {43, 206, 15, 6, 8, 10};
 
-    /* Sphincs Fast Level 5: 1 3 9999 6 9 3 */
+    /* Sphincs Fast Level 5: 1.3.9999.6.9.10 */
     static const byte sigSphincsFast_Level5Oid[] =
-        {43, 206, 15, 6, 9, 3};
+        {43, 206, 15, 6, 9, 10};
 
-    /* Sphincs Small Level 1: 1 3 9999 6 7 10 */
+    /* Sphincs Small Level 1: 1.3.9999.6.7.16 */
     static const byte sigSphincsSmall_Level1Oid[] =
-        {43, 206, 15, 6, 7, 10};
+        {43, 206, 15, 6, 7, 16};
 
-    /* Sphincs Small Level 3: 1 3 9999 6 8 7 */
+    /* Sphincs Small Level 3: 1.3.9999.6.8.12 */
     static const byte sigSphincsSmall_Level3Oid[] =
-        {43, 206, 15, 6, 8, 7};
+        {43, 206, 15, 6, 8, 12};
 
-    /* Sphincs Small Level 5: 1 3 9999 6 9 7 */
+    /* Sphincs Small Level 5: 1.3.9999.6.9.12 */
     static const byte sigSphincsSmall_Level5Oid[] =
-        {43, 206, 15, 6, 9, 7};
+        {43, 206, 15, 6, 9, 12};
 #endif /* HAVE_SPHINCS */
 
 /* keyType */
@@ -4319,11 +4319,11 @@ static word32 SetBitString16Bit(word16 val, byte* output)
     static const byte keyDhOid[] = {42, 134, 72, 134, 247, 13, 1, 3, 1};
 #endif /* !NO_DH */
 #ifdef HAVE_FALCON
-    /* Falcon Level 1: 1 3 9999 3 6 */
-    static const byte keyFalcon_Level1Oid[] = {43, 206, 15, 3, 6};
+    /* Falcon Level 1: 1.3.9999.3.11 */
+    static const byte keyFalcon_Level1Oid[] = {43, 206, 15, 3, 11};
 
-    /* Falcon Level 5: 1 3 9999 3 9 */
-    static const byte keyFalcon_Level5Oid[] = {43, 206, 15, 3, 9};
+    /* Falcon Level 5: 1.3.9999.3.14 */
+    static const byte keyFalcon_Level5Oid[] = {43, 206, 15, 3, 14};
 #endif /* HAVE_FALCON */
 #ifdef HAVE_DILITHIUM
 #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
@@ -4353,29 +4353,29 @@ static word32 SetBitString16Bit(word16 val, byte* output)
         {96, 134, 72, 1, 101, 3, 4, 3, 19};
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
-    /* Sphincs Fast Level 1: 1 3 9999 6 7 4 */
+    /* Sphincs Fast Level 1: 1.3.9999.6.7.13 */
     static const byte keySphincsFast_Level1Oid[] =
-        {43, 206, 15, 6, 7, 4};
+        {43, 206, 15, 6, 7, 13};
 
-    /* Sphincs Fast Level 3: 1 3 9999 6 8 3 */
+    /* Sphincs Fast Level 3: 1.3.9999.6.8.10 */
     static const byte keySphincsFast_Level3Oid[] =
-        {43, 206, 15, 6, 8, 3};
+        {43, 206, 15, 6, 8, 10};
 
-    /* Sphincs Fast Level 5: 1 3 9999 6 9 3 */
+    /* Sphincs Fast Level 5: 1.3.9999.6.9.10 */
     static const byte keySphincsFast_Level5Oid[] =
-        {43, 206, 15, 6, 9, 3};
+        {43, 206, 15, 6, 9, 10};
 
-    /* Sphincs Small Level 1: 1 3 9999 6 7 10 */
+    /* Sphincs Small Level 1: 1.3.9999.6.7.16 */
     static const byte keySphincsSmall_Level1Oid[] =
-        {43, 206, 15, 6, 7, 10};
+        {43, 206, 15, 6, 7, 16};
 
-    /* Sphincs Small Level 3: 1 3 9999 6 8 7 */
+    /* Sphincs Small Level 3: 1.3.9999.6.8.12 */
     static const byte keySphincsSmall_Level3Oid[] =
-        {43, 206, 15, 6, 8, 7};
+        {43, 206, 15, 6, 8, 12};
 
-    /* Sphincs Small Level 5: 1 3 9999 6 9 7 */
+    /* Sphincs Small Level 5: 1.3.9999.6.9.12 */
     static const byte keySphincsSmall_Level5Oid[] =
-        {43, 206, 15, 6, 9, 7};
+        {43, 206, 15, 6, 9, 12};
 #endif /* HAVE_SPHINCS */
 
 /* curveType */
@@ -5967,17 +5967,17 @@ static int GetOID(const byte* input, word32* inOutIdx, word32* oid,
 
 #if defined(HAVE_SPHINCS)
     /* Since we are summing it up, there could be collisions...and indeed there
-     * are: SPHINCS_FAST_LEVEL1 and SPHINCS_FAST_LEVEL3.
+     * are: SPHINCS_FAST_LEVEL1 and SPHINCS_SMALL_LEVEL3.
      *
-     * We will look for the special case of SPHINCS_FAST_LEVEL3 and set *oid to
-     * 283 instead of 281; 282 is taken.
+     * We will look for the special case of SPHINCS_SMALL_LEVEL3 and set *oid to
+     * 292 instead of 290; 291 is taken.
      *
      * These hacks will hopefully disappear when new standardized OIDs appear.
      */
-    if (idx + (word32)sizeof(sigSphincsFast_Level3Oid) < (word32)length &&
-            XMEMCMP(&input[idx], sigSphincsFast_Level3Oid,
-               sizeof(sigSphincsFast_Level3Oid)) == 0) {
-        found_collision = SPHINCS_FAST_LEVEL3k;
+    if (idx + (word32)sizeof(sigSphincsSmall_Level3Oid) < (word32)length &&
+            XMEMCMP(&input[idx], sigSphincsSmall_Level3Oid,
+               sizeof(sigSphincsSmall_Level3Oid)) == 0) {
+        found_collision = SPHINCS_SMALL_LEVEL3k;
     }
 #endif /* HAVE_SPHINCS */
 
@@ -25511,8 +25511,9 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
                 header = BEGIN_ENC_PRIV_KEY;
                 footer = END_ENC_PRIV_KEY;
             }
+    #define HEADER_LAST BEGIN_ENC_PRIV_KEY
 #ifdef HAVE_ECC
-            else if (header == BEGIN_ENC_PRIV_KEY) {
+            else if (header == HEADER_LAST) {
                 header = BEGIN_EC_PRIV;
                 footer = END_EC_PRIV;
             }
@@ -25520,16 +25521,60 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
                 header = BEGIN_DSA_PRIV;
                 footer = END_DSA_PRIV;
             }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_DSA_PRIV
 #endif
 #if defined(HAVE_ED25519) || defined(HAVE_ED448)
-    #ifdef HAVE_ECC
-            else if (header == BEGIN_DSA_PRIV) {
-    #else
-            else if (header == BEGIN_ENC_PRIV_KEY) {
-    #endif
+            else if (header == HEADER_LAST) {
                 header = BEGIN_EDDSA_PRIV;
                 footer = END_EDDSA_PRIV;
             }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_EDDSA_PRIV
+#endif
+#if defined(HAVE_DILITHIUM)
+    #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+            else if (header == HEADER_LAST) {
+                header = BEGIN_DILITHIUM_LEVEL2_PRIV;
+                footer = END_DILITHIUM_LEVEL2_PRIV;
+            }
+            else if (header == BEGIN_DILITHIUM_LEVEL2_PRIV) {
+                header = BEGIN_DILITHIUM_LEVEL3_PRIV;
+                footer = END_DILITHIUM_LEVEL3_PRIV;
+            }
+            else if (header == BEGIN_DILITHIUM_LEVEL3_PRIV) {
+                header = BEGIN_DILITHIUM_LEVEL5_PRIV;
+                footer = END_DILITHIUM_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_DILITHIUM_LEVEL5_PRIV
+    #endif /* WOLFSSL_DILITHIUM_FIPS204_DRAFT */
+            else if (header == HEADER_LAST) {
+                header = BEGIN_ML_DSA_LEVEL2_PRIV;
+                footer = END_ML_DSA_LEVEL2_PRIV;
+            }
+            else if (header == BEGIN_ML_DSA_LEVEL2_PRIV) {
+                header = BEGIN_ML_DSA_LEVEL3_PRIV;
+                footer = END_ML_DSA_LEVEL3_PRIV;
+            }
+            else if (header == BEGIN_ML_DSA_LEVEL3_PRIV) {
+                header = BEGIN_ML_DSA_LEVEL5_PRIV;
+                footer = END_ML_DSA_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_ML_DSA_LEVEL5_PRIV
+#endif
+#if defined(HAVE_FALCON)
+            else if (header == HEADER_LAST) {
+                header = BEGIN_FALCON_LEVEL1_PRIV;
+                footer = END_FALCON_LEVEL1_PRIV;
+            }
+            else if (header == BEGIN_FALCON_LEVEL1_PRIV) {
+                header = BEGIN_FALCON_LEVEL5_PRIV;
+                footer = END_FALCON_LEVEL5_PRIV;
+            }
+    #undef HEADER_LAST
+    #define HEADER_LAST BEGIN_FALCON_LEVEL5_PRIV
 #endif
             else {
             #ifdef WOLF_PRIVATE_KEY_ID
@@ -25742,6 +25787,20 @@ int PemToDer(const unsigned char* buff, long longSz, int type,
 #endif
 #ifdef HAVE_ECC
          || header == BEGIN_EC_PRIV
+#endif
+#ifdef HAVE_DILITHIUM
+    #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+         || header == BEGIN_DILITHIUM_LEVEL2_PRIV
+         || header == BEGIN_DILITHIUM_LEVEL3_PRIV
+         || header == BEGIN_DILITHIUM_LEVEL5_PRIV
+    #endif
+         || header == BEGIN_ML_DSA_LEVEL2_PRIV
+         || header == BEGIN_ML_DSA_LEVEL3_PRIV
+         || header == BEGIN_ML_DSA_LEVEL5_PRIV
+#endif
+#ifdef HAVE_FALCON
+         || header == BEGIN_FALCON_LEVEL1_PRIV
+         || header == BEGIN_FALCON_LEVEL5_PRIV
 #endif
         ) && !encrypted_key)
     {
@@ -36062,11 +36121,17 @@ int wc_Ed25519PublicKeyDecode(const byte* input, word32* inOutIdx,
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
-        pubKey, &pubKeyLen, ED25519k);
-    if (ret == 0) {
-        ret = wc_ed25519_import_public(pubKey, pubKeyLen, key);
+    /* Try to import the key directly. */
+    ret = wc_ed25519_import_public(input, inSz, key);
+    if (ret != 0) {
+        /* Start again with decoding the data first */
+        ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
+                    pubKey, &pubKeyLen, ED25519k);
+        if (ret == 0) {
+            ret = wc_ed25519_import_public(pubKey, pubKeyLen, key);
+        }
     }
+
     return ret;
 }
 #endif /* HAVE_ED25519 && HAVE_ED25519_KEY_IMPORT */
@@ -36464,11 +36529,17 @@ int wc_Ed448PublicKeyDecode(const byte* input, word32* inOutIdx,
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
-        pubKey, &pubKeyLen, ED448k);
-    if (ret == 0) {
-        ret = wc_ed448_import_public(pubKey, pubKeyLen, key);
+    /* Try to import the key directly. */
+    ret = wc_ed448_import_public(input, inSz, key);
+    if (ret != 0) {
+        /* Start again with decoding the data first */
+        ret = DecodeAsymKeyPublic(input, inOutIdx, inSz,
+                    pubKey, &pubKeyLen, ED448k);
+        if (ret == 0) {
+            ret = wc_ed448_import_public(pubKey, pubKeyLen, key);
+        }
     }
+
     return ret;
 }
 #endif /* HAVE_ED448 && HAVE_ED448_KEY_IMPORT */

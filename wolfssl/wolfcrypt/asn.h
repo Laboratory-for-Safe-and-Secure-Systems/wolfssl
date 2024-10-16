@@ -1156,7 +1156,15 @@ enum Misc_ASN {
     MAX_DER_DIGEST_ASN_SZ = MAX_ENCODED_DIG_ASN_SZ + MAX_ALGO_SZ + MAX_SEQ_SZ,
                             /* Maximum DER digest ASN header size */
                             /* Max X509 header length indicates the max length + 2 ('\n', '\0') */
+#if defined(HAVE_SPHINCS)
+    MAX_X509_HEADER_SZ  = (48 + 2), /* Maximum PEM Header/Footer Size */
+#elif defined(HAVE_DILITHIUM)
+    MAX_X509_HEADER_SZ  = (44 + 2), /* Maximum PEM Header/Footer Size */
+#elif defined(HAVE_FALCON)
+    MAX_X509_HEADER_SZ  = (41 + 2), /* Maximum PEM Header/Footer Size */
+#else
     MAX_X509_HEADER_SZ  = (37 + 2), /* Maximum PEM Header/Footer Size */
+#endif
 #ifdef WOLFSSL_CERT_GEN
     #ifdef WOLFSSL_CERT_REQ
                           /* Max encoded cert req attributes length */
@@ -1325,20 +1333,20 @@ enum Key_Sum {
     ED448k            = 257, /* 1.3.101.113 */
     X448k             = 255, /* 1.3.101.111 */
     DHk               = 647, /* dhKeyAgreement OID: 1.2.840.113549.1.3.1 */
-    FALCON_LEVEL1k    = 273, /* 1.3.9999.3.6 */
-    FALCON_LEVEL5k    = 276, /* 1.3.9999.3.9 */
+    FALCON_LEVEL1k    = 278, /* 1.3.9999.3.11 */
+    FALCON_LEVEL5k    = 281, /* 1.3.9999.3.14 */
     DILITHIUM_LEVEL2k = 218,    /* 1.3.6.1.4.1.2.267.12.4.4 */
     DILITHIUM_LEVEL3k = 221,    /* 1.3.6.1.4.1.2.267.12.6.5 */
     DILITHIUM_LEVEL5k = 225,    /* 1.3.6.1.4.1.2.267.12.8.7 */
     ML_DSA_LEVEL2k    = 431,    /* 2.16.840.1.101.3.4.3.17 */
     ML_DSA_LEVEL3k    = 432,    /* 2.16.840.1.101.3.4.3.18 */
     ML_DSA_LEVEL5k    = 433,    /* 2.16.840.1.101.3.4.3.19 */
-    SPHINCS_FAST_LEVEL1k   = 281, /* 1 3 9999 6 7 4 */
-    SPHINCS_FAST_LEVEL3k   = 283, /* 1 3 9999 6 8 3 + 2 (See GetOID() in asn.c) */
-    SPHINCS_FAST_LEVEL5k   = 282, /* 1 3 9999 6 9 3 */
-    SPHINCS_SMALL_LEVEL1k  = 287, /* 1 3 9999 6 7 10 */
-    SPHINCS_SMALL_LEVEL3k  = 285, /* 1 3 9999 6 8 7 */
-    SPHINCS_SMALL_LEVEL5k  = 286  /* 1 3 9999 6 9 7 */
+    SPHINCS_FAST_LEVEL1k   = 290, /* 1.3.9999.6.7.13 */
+    SPHINCS_FAST_LEVEL3k   = 288, /* 1.3.9999.6.8.10 */
+    SPHINCS_FAST_LEVEL5k   = 289, /* 1.3.9999.6.9.10 */
+    SPHINCS_SMALL_LEVEL1k  = 293, /* 1.3.9999.6.7.16 */
+    SPHINCS_SMALL_LEVEL3k  = 292, /* 1.3.9999.6.8.12 + 2 (See GetOID() in asn.c)*/
+    SPHINCS_SMALL_LEVEL5k  = 291  /* 1.3.9999.6.9.12 */
 };
 
 #if !defined(NO_AES) || defined(HAVE_PKCS7)
@@ -2549,8 +2557,8 @@ WOLFSSL_LOCAL int StoreDHparams(byte* out, word32* outLen, mp_int* p, mp_int* g)
 WOLFSSL_API int wc_DhPublicKeyDecode(const byte* input, word32* inOutIdx,
                         DhKey* key, word32 inSz);
 #endif
-WOLFSSL_LOCAL int FlattenAltNames(byte* output, word32 outputSz,
-                                  const DNS_entry* names);
+WOLFSSL_ASN_API int FlattenAltNames(byte* output, word32 outputSz,
+                                    const DNS_entry* names);
 
 WOLFSSL_LOCAL int wc_EncodeName(EncodedName* name, const char* nameStr,
         char nameType, byte type);
