@@ -490,6 +490,10 @@ int wolfCrypt_Cleanup(void)
     #endif
 #endif /* HAVE_ECC */
 
+    #if defined(HAVE_LIBOQS)
+        wolfSSL_liboqsClose();
+    #endif
+
     #if defined(OPENSSL_EXTRA) || defined(DEBUG_WOLFSSL_VERBOSE)
         ret = wc_LoggingCleanup();
     #endif
@@ -565,10 +569,6 @@ int wolfCrypt_Cleanup(void)
         wc_MemZero_Free();
     #endif
     }
-
-#if defined(HAVE_LIBOQS)
-    wolfSSL_liboqsClose();
-#endif
 
     return ret;
 }

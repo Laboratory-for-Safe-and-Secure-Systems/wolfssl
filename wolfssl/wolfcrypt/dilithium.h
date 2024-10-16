@@ -540,9 +540,9 @@
 
 #elif defined(HAVE_LIBOQS)
 
-#define DILITHIUM_LEVEL2_KEY_SIZE     OQS_SIG_ml_dsa_44_ipd_length_secret_key
-#define DILITHIUM_LEVEL2_SIG_SIZE     OQS_SIG_ml_dsa_44_ipd_length_signature
-#define DILITHIUM_LEVEL2_PUB_KEY_SIZE OQS_SIG_ml_dsa_44_ipd_length_public_key
+#define DILITHIUM_LEVEL2_KEY_SIZE     OQS_SIG_ml_dsa_44_length_secret_key
+#define DILITHIUM_LEVEL2_SIG_SIZE     OQS_SIG_ml_dsa_44_length_signature
+#define DILITHIUM_LEVEL2_PUB_KEY_SIZE OQS_SIG_ml_dsa_44_length_public_key
 #define DILITHIUM_LEVEL2_PRV_KEY_SIZE \
     (DILITHIUM_LEVEL2_PUB_KEY_SIZE+DILITHIUM_LEVEL2_KEY_SIZE)
 /* Buffer sizes large enough to store exported DER encoded keys */
@@ -553,9 +553,9 @@
  * the footer "-----END PRIVATE KEY-----" */
 #define DILITHIUM_LEVEL2_BOTH_KEY_PEM_SIZE 5344
 
-#define DILITHIUM_LEVEL3_KEY_SIZE     OQS_SIG_ml_dsa_65_ipd_length_secret_key
-#define DILITHIUM_LEVEL3_SIG_SIZE     OQS_SIG_ml_dsa_65_ipd_length_signature
-#define DILITHIUM_LEVEL3_PUB_KEY_SIZE OQS_SIG_ml_dsa_65_ipd_length_public_key
+#define DILITHIUM_LEVEL3_KEY_SIZE     OQS_SIG_ml_dsa_65_length_secret_key
+#define DILITHIUM_LEVEL3_SIG_SIZE     OQS_SIG_ml_dsa_65_length_signature
+#define DILITHIUM_LEVEL3_PUB_KEY_SIZE OQS_SIG_ml_dsa_65_length_public_key
 #define DILITHIUM_LEVEL3_PRV_KEY_SIZE \
     (DILITHIUM_LEVEL3_PUB_KEY_SIZE+DILITHIUM_LEVEL3_KEY_SIZE)
 /* Buffer sizes large enough to store exported DER encoded keys */
@@ -566,9 +566,9 @@
  * the footer "-----END PRIVATE KEY-----" */
 #define DILITHIUM_LEVEL3_BOTH_KEY_PEM_SIZE 8204
 
-#define DILITHIUM_LEVEL5_KEY_SIZE     OQS_SIG_ml_dsa_87_ipd_length_secret_key
-#define DILITHIUM_LEVEL5_SIG_SIZE     OQS_SIG_ml_dsa_87_ipd_length_signature
-#define DILITHIUM_LEVEL5_PUB_KEY_SIZE OQS_SIG_ml_dsa_87_ipd_length_public_key
+#define DILITHIUM_LEVEL5_KEY_SIZE     OQS_SIG_ml_dsa_87_length_secret_key
+#define DILITHIUM_LEVEL5_SIG_SIZE     OQS_SIG_ml_dsa_87_length_signature
+#define DILITHIUM_LEVEL5_PUB_KEY_SIZE OQS_SIG_ml_dsa_87_length_public_key
 #define DILITHIUM_LEVEL5_PRV_KEY_SIZE \
     (DILITHIUM_LEVEL5_PUB_KEY_SIZE+DILITHIUM_LEVEL5_KEY_SIZE)
 /* Buffer sizes large enough to store exported DER encoded keys */
@@ -579,9 +579,9 @@
  * the footer "-----END ML_DSA_LEVEL5 PRIVATE KEY-----" */
 #define DILITHIUM_LEVEL5_BOTH_KEY_PEM_SIZE 10267
 
-#define ML_DSA_LEVEL2_KEY_SIZE        OQS_SIG_ml_dsa_44_ipd_length_secret_key
-#define ML_DSA_LEVEL2_SIG_SIZE        OQS_SIG_ml_dsa_44_ipd_length_signature
-#define ML_DSA_LEVEL2_PUB_KEY_SIZE    OQS_SIG_ml_dsa_44_ipd_length_public_key
+#define ML_DSA_LEVEL2_KEY_SIZE        OQS_SIG_ml_dsa_44_length_secret_key
+#define ML_DSA_LEVEL2_SIG_SIZE        OQS_SIG_ml_dsa_44_length_signature
+#define ML_DSA_LEVEL2_PUB_KEY_SIZE    OQS_SIG_ml_dsa_44_length_public_key
 #define ML_DSA_LEVEL2_PRV_KEY_SIZE    \
     (ML_DSA_LEVEL2_PUB_KEY_SIZE+ML_DSA_LEVEL2_KEY_SIZE)
 /* Buffer sizes large enough to store exported DER encoded keys */
@@ -592,9 +592,9 @@
  * the footer "-----END PRIVATE KEY-----" */
 #define ML_DSA_LEVEL2_BOTH_KEY_PEM_SIZE DILITHIUM_LEVEL2_BOTH_KEY_PEM_SIZE
 
-#define ML_DSA_LEVEL3_KEY_SIZE        OQS_SIG_ml_dsa_65_ipd_length_secret_key
-#define ML_DSA_LEVEL3_SIG_SIZE        OQS_SIG_ml_dsa_65_ipd_length_signature
-#define ML_DSA_LEVEL3_PUB_KEY_SIZE    OQS_SIG_ml_dsa_65_ipd_length_public_key
+#define ML_DSA_LEVEL3_KEY_SIZE        OQS_SIG_ml_dsa_65_length_secret_key
+#define ML_DSA_LEVEL3_SIG_SIZE        OQS_SIG_ml_dsa_65_length_signature
+#define ML_DSA_LEVEL3_PUB_KEY_SIZE    OQS_SIG_ml_dsa_65_length_public_key
 #define ML_DSA_LEVEL3_PRV_KEY_SIZE    \
     (ML_DSA_LEVEL3_PUB_KEY_SIZE+ML_DSA_LEVEL3_KEY_SIZE)
 /* Buffer sizes large enough to store exported DER encoded keys */
@@ -605,9 +605,9 @@
  * the footer "-----END PRIVATE KEY-----" */
 #define ML_DSA_LEVEL3_BOTH_KEY_PEM_SIZE DILITHIUM_LEVEL3_BOTH_KEY_PEM_SIZE
 
-#define ML_DSA_LEVEL5_KEY_SIZE        OQS_SIG_ml_dsa_87_ipd_length_secret_key
-#define ML_DSA_LEVEL5_SIG_SIZE        OQS_SIG_ml_dsa_87_ipd_length_signature
-#define ML_DSA_LEVEL5_PUB_KEY_SIZE    OQS_SIG_ml_dsa_87_ipd_length_public_key
+#define ML_DSA_LEVEL5_KEY_SIZE        OQS_SIG_ml_dsa_87_length_secret_key
+#define ML_DSA_LEVEL5_SIG_SIZE        OQS_SIG_ml_dsa_87_length_signature
+#define ML_DSA_LEVEL5_PUB_KEY_SIZE    OQS_SIG_ml_dsa_87_length_public_key
 #define ML_DSA_LEVEL5_PRV_KEY_SIZE    \
     (ML_DSA_LEVEL5_PUB_KEY_SIZE+ML_DSA_LEVEL5_KEY_SIZE)
 /* Buffer sizes large enough to store exported DER encoded keys */
