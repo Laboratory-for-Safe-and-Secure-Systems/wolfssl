@@ -1182,7 +1182,15 @@ enum Misc_ASN {
     MAX_DER_DIGEST_ASN_SZ = MAX_ENCODED_DIG_ASN_SZ + MAX_ALGO_SZ + MAX_SEQ_SZ,
                             /* Maximum DER digest ASN header size */
                             /* Max X509 header length indicates the max length + 2 ('\n', '\0') */
+#if defined(HAVE_SPHINCS)
+    MAX_X509_HEADER_SZ  = (48 + 2), /* Maximum PEM Header/Footer Size */
+#elif defined(HAVE_DILITHIUM)
+    MAX_X509_HEADER_SZ  = (44 + 2), /* Maximum PEM Header/Footer Size */
+#elif defined(HAVE_FALCON)
+    MAX_X509_HEADER_SZ  = (41 + 2), /* Maximum PEM Header/Footer Size */
+#else
     MAX_X509_HEADER_SZ  = (37 + 2), /* Maximum PEM Header/Footer Size */
+#endif
 #ifdef WOLFSSL_CERT_GEN
     #ifdef WOLFSSL_CERT_REQ
                           /* Max encoded cert req attributes length */
@@ -2370,8 +2378,8 @@ WOLFSSL_LOCAL int StoreDHparams(byte* out, word32* outLen, mp_int* p, mp_int* g)
 WOLFSSL_API int wc_DhPublicKeyDecode(const byte* input, word32* inOutIdx,
                         DhKey* key, word32 inSz);
 #endif
-WOLFSSL_LOCAL int FlattenAltNames(byte* output, word32 outputSz,
-                                  const DNS_entry* names);
+WOLFSSL_ASN_API int FlattenAltNames(byte* output, word32 outputSz,
+                                    const DNS_entry* names);
 
 WOLFSSL_LOCAL int wc_EncodeName(EncodedName* name, const char* nameStr,
         char nameType, byte type);
