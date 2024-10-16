@@ -853,6 +853,7 @@ static int ProcessBufferTryDecodeFalcon(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     DerBuffer* der, int* keyFormat, void* heap, byte* keyType, int* keySize)
 {
     int ret;
+    word32 idx;
     falcon_key* key;
 
     /* Allocate a Falcon key to parse into. */
@@ -883,7 +884,8 @@ static int ProcessBufferTryDecodeFalcon(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
 
     if (ret == 0) {
         /* Decode as a Falcon private key. */
-        ret = wc_falcon_import_private_only(der->buffer, der->length, key);
+        idx = 0;
+        ret = wc_Falcon_PrivateKeyDecode(der->buffer, &idx, key, der->length);
         if (ret == 0) {
             /* Get the minimum Falcon key size from SSL or SSL context object.
              */
