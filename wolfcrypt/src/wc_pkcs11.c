@@ -27,10 +27,6 @@
 
 #ifdef HAVE_PKCS11
 
-#ifndef HAVE_PKCS11_STATIC
-#include <dlfcn.h>
-#endif
-
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/asn.h>
@@ -44,6 +40,22 @@
     #define WOLFSSL_MISC_INCLUDED
     #include <wolfcrypt/src/misc.c>
 #endif
+
+#ifndef HAVE_PKCS11_STATIC
+#if defined(_WIN32)
+    #include <Windows.h>
+
+    #define OPENLIB(libname) LoadLibrary((libname))
+    #define LIBFUNC(lib, fn) GetProcAddress((lib), (fn))
+    #define CLOSELIB(lib)    FreeLibrary((lib))
+#else
+    #include <dlfcn.h>
+
+    #define OPENLIB(libname) dlopen((libname), RTLD_NOW | RTLD_LOCAL)
+    #define LIBFUNC(lib, fn) dlsym((lib), (fn))
+    #define CLOSELIB(lib)    dlclose((lib))
+#endif /* _WIN32 */
+#endif /* HAVE_PKCS11_STATIC */
 
 #ifndef WOLFSSL_HAVE_ECC_KEY_GET_PRIV
     /* FIPS build has replaced ecc.h. */
@@ -534,18 +546,26 @@ int wc_Pkcs11_Initialize_ex(Pkcs11Dev* dev, const char* library, void* heap,
     if (ret == 0) {
         dev->heap = heap;
 #ifndef HAVE_PKCS11_STATIC
-        dev->dlHandle = dlopen(library, RTLD_NOW | RTLD_LOCAL);
+        dev->dlHandle = OPENLIB(library);
         if (dev->dlHandle == NULL) {
+    #if defined(_WIN32)
+            WOLFSSL_MSG_EX("LoadLibrary() error: %d", GetLastError());
+    #else
             WOLFSSL_MSG(dlerror());
+    #endif
             ret = BAD_PATH_ERROR;
         }
     }
 
     if (ret == 0) {
         dev->func = NULL;
-        func = dlsym(dev->dlHandle, "C_GetFunctionList");
+        func = LIBFUNC(dev->dlHandle, "C_GetFunctionList");
         if (func == NULL) {
+    #if defined(_WIN32)
+            WOLFSSL_MSG_EX("GetProcAddress() error: %d", GetLastError());
+    #else
             WOLFSSL_MSG(dlerror());
+    #endif
             ret = WC_HW_E;
         }
     }
@@ -598,7 +618,7 @@ void wc_Pkcs11_Finalize(Pkcs11Dev* dev)
             dev->func = NULL;
         }
 #ifndef HAVE_PKCS11_STATIC
-        dlclose(dev->dlHandle);
+        CLOSELIB(dev->dlHandle);
         dev->dlHandle = NULL;
 #endif
     }
@@ -1208,7 +1228,7 @@ static int Pkcs11EccSetParams(ecc_key* key, CK_ATTRIBUTE* tmpl, int idx)
 {
     int ret = 0;
 
-    if (key->dp != NULL && key->dp->oid != NULL) {
+    if (key != NULL && key->dp != NULL) {
         unsigned char* derParams = tmpl[idx].pValue;
 #if defined(HAVE_OID_ENCODING)
         word32 oidSz = ECC_MAX_OID_LEN - 2;
@@ -1485,7 +1505,7 @@ static int Pkcs11CreateKyberPublicKey(CK_OBJECT_HANDLE* handle,
 
     return ret;
 }
-
+ #if 0 /* Not used yet... */
 /**
  * Create a PKCS#11 object containing the Kyber private key data.
  *
@@ -1569,6 +1589,7 @@ static int Pkcs11CreateKyberPrivateKey(CK_OBJECT_HANDLE* privateKey,
     return ret;
 }
 #endif
+#endif /* HAVE_PQC && WOLFSSL_HAVE_KYBER */
 
 #if defined(HAVE_PQC) && defined(HAVE_DILITHIUM)
 /**
@@ -2770,6 +2791,7 @@ static int Pkcs11RsaSign(Pkcs11Session* session, wc_CryptoInfo* info,
     return ret;
 }
 
+#if 0
 /**
  * Exponentiate the input with the public part of the RSA key.
  * Used in public encrypt and decrypt.
@@ -2820,6 +2842,7 @@ static int Pkcs11RsaVerify(Pkcs11Session* session, wc_CryptoInfo* info,
 
     return ret;
 }
+#endif
 
 /**
  * Perform an RSA operation.
