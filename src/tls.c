@@ -10848,14 +10848,21 @@ int TLSX_KeyShare_SetSupported(const WOLFSSL* ssl, TLSX** extensions)
 }
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
+/* Get the length of the CKS extension */
+static word16 CKS_LEN(WOLFSSL* ssl)
+{
+    return OPAQUE16_LEN + ssl->hybridSigAlgosSz;
+}
+
 /* Writes the CKS objects of a list in a buffer. */
 static word16 CKS_WRITE(WOLFSSL* ssl, byte* output)
 {
-    XMEMCPY(output, ssl->sigSpec, ssl->sigSpecSz);
-    return ssl->sigSpecSz;
+    c16toa(ssl->hybridSigAlgosSz, output);
+    XMEMCPY(output + OPAQUE16_LEN, ssl->hybridSigAlgos, ssl->hybridSigAlgosSz);
+    return OPAQUE16_LEN + ssl->hybridSigAlgosSz;
 }
 
-static int TLSX_UseCKS(TLSX** extensions, WOLFSSL* ssl, void* heap)
+int TLSX_UseCKS(TLSX** extensions, WOLFSSL* ssl, void* heap)
 {
     int ret = 0;
     TLSX* extension;
@@ -10891,86 +10898,44 @@ int TLSX_CKS_Set(WOLFSSL* ssl, TLSX** extensions)
     return ret;
 }
 
-int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input, word16 length,
-                   TLSX** extensions)
+/* This method is called when a CKS extension is received within the
+ * ClientHello or CertificateRequest messages. In this case, the `input`
+ * and `length` arguments contain the information of the received extension
+ * data.
+ * We store the received list of supported hybrid signature algorithms for
+ * later processing in the MatchSuite logic.
+ */
+int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input, word16 length)
 {
-    int ret;
-    int i, j;
+    word16 len;
 
-    (void) extensions;
-
-    /* Validating the input. */
-    if (length == 0)
+    /* Must contain a length and at least algorithm. */
+    if (length < OPAQUE16_LEN + OPAQUE16_LEN || (length & 1) != 0)
         return BUFFER_ERROR;
-    for (i = 0; i < length; i++) {
-        switch (input[i])
-        {
-            case WOLFSSL_CKS_SIGSPEC_NATIVE:
-            case WOLFSSL_CKS_SIGSPEC_ALTERNATIVE:
-            case WOLFSSL_CKS_SIGSPEC_BOTH:
-                /* These are all valid values; do nothing */
-                break;
-            case WOLFSSL_CKS_SIGSPEC_EXTERNAL:
-            default:
-                /* All other values (including external) are not. */
-                return BAD_FUNC_ARG;
-        }
-    }
 
-    /* This could be a situation where the client tried to start with TLS 1.3
-     * when it sent ClientHello and the server down-graded to TLS 1.2. In that
-     * case, erroring out because it is TLS 1.2 is not a reasonable thing to do.
-     * In the case of TLS 1.2, the CKS values will be ignored. */
-    if (!IsAtLeastTLSv1_3(ssl->version)) {
-        ssl->sigSpec = NULL;
-        ssl->sigSpecSz = 0;
-        return 0;
-    }
+    ato16(input, &len);
+    input += OPAQUE16_LEN;
 
-    /* Extension data is valid, but if we are the server and we don't have an
-     * alt private key, do not respond with CKS extension. */
-    if (wolfSSL_is_server(ssl) &&
-        (ssl->buffers.altKey == NULL || ssl->buffers.altKeyType == 0)) {
-        ssl->sigSpec = NULL;
-        ssl->sigSpecSz = 0;
-        return 0;
-    }
-
-    /* Copy as the lifetime of input seems to be ephemeral. */
-    ssl->peerSigSpec = (byte*)XMALLOC(length, ssl->heap, DYNAMIC_TYPE_TLSX);
-    if (ssl->peerSigSpec == NULL) {
+    /* Algorithm array must fill rest of data. */
+    if (length != OPAQUE16_LEN + len)
         return BUFFER_ERROR;
-    }
-    XMEMCPY(ssl->peerSigSpec, input, length);
-    ssl->peerSigSpecSz = length;
 
-    /* If there is no preference set, use theirs... */
-    if (ssl->sigSpec == NULL) {
-        ret = wolfSSL_UseCKS(ssl, ssl->peerSigSpec, 1);
-        if (ret == WOLFSSL_SUCCESS) {
-            ret = TLSX_UseCKS(&ssl->extensions, ssl, ssl->heap);
-            TLSX_SetResponse(ssl, TLSX_CKS);
-        }
-        return ret;
+    /* truncate hybridPeerSigAlgosSz list if too long */
+    ssl->hybridPeerSigAlgosSz = len;
+    if (ssl->hybridPeerSigAlgosSz > WOLFSSL_MAX_SIGALGO) {
+        WOLFSSL_MSG("TLSX CKS Hybrd SigAlgo list exceeds max, truncating");
+        ssl->hybridPeerSigAlgosSz = WOLFSSL_MAX_SIGALGO;
     }
 
-    /* ...otherwise, prioritize our preference. */
-    for (i = 0; i < ssl->sigSpecSz; i++) {
-        for (j = 0; j < length; j++) {
-            if (ssl->sigSpec[i] == input[j]) {
-                /* Got the match, set to this one. */
-                ret = wolfSSL_UseCKS(ssl, &ssl->sigSpec[i], 1);
-                if (ret == WOLFSSL_SUCCESS) {
-                    ret = TLSX_UseCKS(&ssl->extensions, ssl, ssl->heap);
-                    TLSX_SetResponse(ssl, TLSX_CKS);
-                }
-                return ret;
-            }
-        }
-    }
+    /* Allocate memory for list */
+    ssl->hybridPeerSigAlgos = (byte*)XMALLOC(ssl->hybridPeerSigAlgosSz,
+                                             ssl->heap, DYNAMIC_TYPE_TLSX);
+    if (ssl->hybridPeerSigAlgos == NULL)
+        return MEMORY_E;
 
-    /* No match found. Cannot continue. */
-    return MATCH_SUITE_ERROR;
+    XMEMCPY(ssl->hybridPeerSigAlgos, input, ssl->hybridPeerSigAlgosSz);
+
+    return 0;
 }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
 
@@ -13716,7 +13681,7 @@ static int TLSX_GetSize(TLSX* list, byte* semaphore, byte msgType,
         switch (extension->type) {
 #ifdef WOLFSSL_DUAL_ALG_CERTS
             case TLSX_CKS:
-                length += ((WOLFSSL*)extension->data)->sigSpecSz ;
+                length += CKS_LEN((WOLFSSL*)extension->data);
                 break;
 #endif
 #ifdef HAVE_SNI
@@ -14573,7 +14538,8 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
         }
 #endif
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-        if ((IsAtLeastTLSv1_3(ssl->version)) && (ssl->sigSpec != NULL)) {
+        if (IsAtLeastTLSv1_3(ssl->version) && (ssl->hybridSigAlgosSz > 0) &&
+        (ssl->hybridSigAlgos != NULL)) {
             WOLFSSL_MSG("Adding CKS extension");
             if ((ret = TLSX_UseCKS(&ssl->extensions, ssl, ssl->heap)) != 0) {
                 return ret;
@@ -15114,6 +15080,9 @@ int TLSX_GetRequestSize(WOLFSSL* ssl, byte msgType, word32* pLength)
         if (SSL_CA_NAMES(ssl) != NULL)
             TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERTIFICATE_AUTHORITIES));
 #endif
+#ifdef WOLFSSL_DUAL_ALG_CERTS
+        TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CKS));
+#endif
         /* TODO: TLSX_SIGNED_CERTIFICATE_TIMESTAMP, OID_FILTERS
          *       TLSX_STATUS_REQUEST
          */
@@ -15366,6 +15335,9 @@ int TLSX_WriteRequest(WOLFSSL* ssl, byte* output, byte msgType, word32* pOffset)
                     TLSX_ToSemaphore(TLSX_CERTIFICATE_AUTHORITIES));
         }
 #endif
+#ifdef WOLFSSL_DUAL_ALG_CERTS
+        TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CKS));
+#endif
         /* TODO: TLSX_SIGNED_CERTIFICATE_TIMESTAMP, TLSX_OID_FILTERS
          *       TLSX_STATUS_REQUEST
          */
@@ -15547,6 +15519,10 @@ int TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType, word16* pLength)
             /* Don't send out any extension except those that are turned off. */
             XMEMSET(semaphore, 0xff, SEMAPHORE_SIZE);
             TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_STATUS_REQUEST));
+        #ifdef WOLFSSL_DUAL_ALG_CERTS
+            if (!wolfSSL_is_server(ssl))
+                TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CKS));
+        #endif
             /* TODO: TLSX_SIGNED_CERTIFICATE_TIMESTAMP,
              *       TLSX_SERVER_CERTIFICATE_TYPE
              */
@@ -15696,6 +15672,10 @@ int TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType, word16* pOffset
                  * off. */
                 XMEMSET(semaphore, 0xff, SEMAPHORE_SIZE);
                 TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_STATUS_REQUEST));
+            #ifdef WOLFSSL_DUAL_ALG_CERTS
+                if (!wolfSSL_is_server(ssl))
+                    TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CKS));
+            #endif
                 /* TODO: TLSX_SIGNED_CERTIFICATE_TIMESTAMP,
                  *       TLSX_SERVER_CERTIFICATE_TYPE
                  */
@@ -16131,14 +16111,17 @@ int TLSX_Parse(WOLFSSL* ssl, const byte* input, word16 length, byte msgType,
 #ifdef WOLFSSL_DUAL_ALG_CERTS
             case TLSX_CKS:
                 WOLFSSL_MSG("CKS extension received");
+                if (!IsAtLeastTLSv1_3(ssl->version)) {
+                    /* Ignore extension */
+                    break;
+                }
                 if (msgType != client_hello &&
-                     msgType != encrypted_extensions) {
+                    msgType != certificate_request) {
                         WOLFSSL_ERROR_VERBOSE(EXT_NOT_ALLOWED);
                         return EXT_NOT_ALLOWED;
                 }
-                ret = TLSX_CKS_Parse(ssl, (byte *)(input + offset), size,
-                                     &ssl->extensions);
-            break;
+                ret = TLSX_CKS_Parse(ssl, (byte *)(input + offset), size);
+                break;
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
             case TLSX_EC_POINT_FORMATS:
                 WOLFSSL_MSG("Point Formats extension received");

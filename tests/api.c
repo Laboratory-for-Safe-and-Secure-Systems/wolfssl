@@ -919,12 +919,11 @@ static int do_dual_alg_root_certgen(byte **out, char *caKeyFile,
     newCert.sigType = CTC_SHA256wRSA;
     newCert.isCA    = 1;
 
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "1.2.3.4.5",
-                (const byte *)"This is NOT a critical extension", 32), 0);
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "2.5.29.72", sapkiBuf,
-                sapkiSz), 0);
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "2.5.29.73", altSigAlgBuf,
-                                altSigAlgSz), 0);
+    newCert.sapkiDer = sapkiBuf;
+    newCert.sapkiLen = sapkiSz;
+
+    newCert.altSigAlgDer = altSigAlgBuf;
+    newCert.altSigAlgLen = altSigAlgSz;
 
     XMEMSET(scratchBuf, 0, scratchSz);
     ExpectIntGT(scratchSz = wc_MakeSelfCert(&newCert, scratchBuf, scratchSz,
@@ -939,8 +938,8 @@ static int do_dual_alg_root_certgen(byte **out, char *caKeyFile,
     ExpectIntGT(altSigValSz = wc_MakeSigWithBitStr(altSigValBuf, altSigValSz,
                 CTC_SHA256wECDSA, preTbsBuf, preTbsSz, ECC_TYPE, &altCaKey,
                 &rng), 0);
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "2.5.29.74", altSigValBuf,
-                altSigValSz), 0);
+    newCert.altSigValDer = altSigValBuf;
+    newCert.altSigValLen = altSigValSz;
 
     /* Finally, generate the new certificate. */
     if (outBuf != NULL) {
@@ -1060,10 +1059,13 @@ static int do_dual_alg_server_certgen(byte **out, char *caKeyFile,
     newCert.sigType = CTC_SHA256wRSA;
     newCert.isCA    = 0;
     ExpectIntEQ(wc_SetIssuerBuffer(&newCert, caCertBuf, caCertSz), 0);
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "2.5.29.72", sapkiBuf,
-                sapkiSz), 0);
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "2.5.29.73", altSigAlgBuf,
-                altSigAlgSz), 0);
+
+    newCert.sapkiDer = sapkiBuf;
+    newCert.sapkiLen = sapkiSz;
+
+    newCert.altSigAlgDer = altSigAlgBuf;
+    newCert.altSigAlgLen = altSigAlgSz;
+
     XMEMSET(scratchBuf, 0, scratchSz);
     ExpectIntGT(wc_MakeCert(&newCert, scratchBuf, scratchSz, &serverKey, NULL,
                 &rng), 0);
@@ -1077,8 +1079,8 @@ static int do_dual_alg_server_certgen(byte **out, char *caKeyFile,
     ExpectIntGT(altSigValSz = wc_MakeSigWithBitStr(altSigValBuf, altSigValSz,
                 CTC_SHA256wECDSA, preTbsBuf, preTbsSz, ECC_TYPE, &altCaKey,
                 &rng), 0);
-    ExpectIntEQ(wc_SetCustomExtension(&newCert, 0, "2.5.29.74",
-                 altSigValBuf, altSigValSz), 0);
+    newCert.altSigValDer = altSigValBuf;
+    newCert.altSigValLen = altSigValSz;
     /* Finally, generate the new certificate. */
     if (outBuf != NULL) {
         XMEMSET(outBuf, 0, outSz);
