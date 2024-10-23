@@ -1853,6 +1853,77 @@ enum Misc {
     DILITHIUM_LEVEL5_SA_MAJOR = 0xFE,
     DILITHIUM_LEVEL5_SA_MINOR = 0xD2,
 
+#ifdef WOLFSSL_DUAL_ALG_CERTS
+    /* These match up with what the OQS team has defined
+     * (except for the MLDSA ones). */
+    HYBRID_P256_DILITHIUM_LEVEL2_SA_MAJOR      = 0xFE,
+    HYBRID_P256_DILITHIUM_LEVEL2_SA_MINOR      = 0xD3,
+
+    HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MAJOR   = 0xFE,
+    HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MINOR   = 0xD4,
+
+    HYBRID_P384_DILITHIUM_LEVEL3_SA_MAJOR      = 0xFE,
+    HYBRID_P384_DILITHIUM_LEVEL3_SA_MINOR      = 0xD5,
+
+    HYBRID_P521_DILITHIUM_LEVEL5_SA_MAJOR      = 0xFE,
+    HYBRID_P521_DILITHIUM_LEVEL5_SA_MINOR      = 0xD6,
+
+    HYBRID_P256_ML_DSA_44_SA_MAJOR             = 0xFF,
+    HYBRID_P256_ML_DSA_44_SA_MINOR             = 0xD3,
+
+    HYBRID_RSA3072_ML_DSA_44_SA_MAJOR          = 0xFF,
+    HYBRID_RSA3072_ML_DSA_44_SA_MINOR          = 0xD4,
+
+    HYBRID_P384_ML_DSA_65_SA_MAJOR             = 0xFF,
+    HYBRID_P384_ML_DSA_65_SA_MINOR             = 0xD5,
+
+    HYBRID_P521_ML_DSA_87_SA_MAJOR             = 0xFF,
+    HYBRID_P521_ML_DSA_87_SA_MINOR             = 0xD6,
+
+    HYBRID_P256_FALCON_LEVEL1_SA_MAJOR         = 0xFE,
+    HYBRID_P256_FALCON_LEVEL1_SA_MINOR         = 0xD8,
+
+    HYBRID_RSA3072_FALCON_LEVEL1_SA_MAJOR      = 0xFE,
+    HYBRID_RSA3072_FALCON_LEVEL1_SA_MINOR      = 0xD9,
+
+    HYBRID_P521_FALCON_LEVEL5_SA_MAJOR         = 0xFE,
+    HYBRID_P521_FALCON_LEVEL5_SA_MINOR         = 0xDB,
+
+    /* Custom defined ones for PQC first */
+    HYBRID_DILITHIUM_LEVEL2_P256_SA_MAJOR      = 0xFF,
+    HYBRID_DILITHIUM_LEVEL2_P256_SA_MINOR      = 0xE1,
+
+    HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MAJOR   = 0xFF,
+    HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MINOR   = 0xE2,
+
+    HYBRID_DILITHIUM_LEVEL3_P384_SA_MAJOR      = 0xFF,
+    HYBRID_DILITHIUM_LEVEL3_P384_SA_MINOR      = 0xE3,
+
+    HYBRID_DILITHIUM_LEVEL5_P521_SA_MAJOR      = 0xFF,
+    HYBRID_DILITHIUM_LEVEL5_P521_SA_MINOR      = 0xE4,
+
+    HYBRID_ML_DSA_44_P256_SA_MAJOR             = 0xFF,
+    HYBRID_ML_DSA_44_P256_SA_MINOR             = 0xE5,
+
+    HYBRID_ML_DSA_44_RSA3072_SA_MAJOR          = 0xFF,
+    HYBRID_ML_DSA_44_RSA3072_SA_MINOR          = 0xE6,
+
+    HYBRID_ML_DSA_65_P384_SA_MAJOR             = 0xFF,
+    HYBRID_ML_DSA_65_P384_SA_MINOR             = 0xE7,
+
+    HYBRID_ML_DSA_87_P521_SA_MAJOR             = 0xFF,
+    HYBRID_ML_DSA_87_P521_SA_MINOR             = 0xE8,
+
+    HYBRID_FALCON_LEVEL1_P256_SA_MAJOR         = 0xFF,
+    HYBRID_FALCON_LEVEL1_P256_SA_MINOR         = 0xE9,
+
+    HYBRID_FALCON_LEVEL1_RSA3072_SA_MAJOR      = 0xFF,
+    HYBRID_FALCON_LEVEL1_RSA3072_SA_MINOR      = 0xEA,
+
+    HYBRID_FALCON_LEVEL5_P521_SA_MAJOR         = 0xFF,
+    HYBRID_FALCON_LEVEL5_P521_SA_MINOR         = 0xEB,
+#endif
+
     MIN_RSA_SHA512_PSS_BITS = 512 * 2 + 8 * 8, /* Min key size */
     MIN_RSA_SHA384_PSS_BITS = 384 * 2 + 8 * 8, /* Min key size */
 
@@ -2239,6 +2310,10 @@ WOLFSSL_LOCAL int  CompleteServerHello(WOLFSSL *ssl);
 WOLFSSL_LOCAL int  CheckVersion(WOLFSSL *ssl, ProtocolVersion pv);
 WOLFSSL_LOCAL int  PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
                                    word32 hashSigAlgoSz, int matchSuites);
+#ifdef WOLFSSL_DUAL_ALG_CERTS
+WOLFSSL_LOCAL int PickHybridHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo,
+                                        word32 hashSigAlgoSz, int matchSuites);
+#endif
 #if defined(WOLF_PRIVATE_KEY_ID) && !defined(NO_CHECK_PRIVATE_KEY)
 WOLFSSL_LOCAL int  CreateDevPrivateKey(void** pkey, byte* data, word32 length,
                                        int hsType, int label, int id,
@@ -3629,8 +3704,8 @@ WOLFSSL_LOCAL int TLSX_KeyShare_Parse(WOLFSSL* ssl, const byte* input,
 WOLFSSL_LOCAL int TLSX_KeyShare_Parse_ClientHello(const WOLFSSL* ssl,
         const byte* input, word16 length, TLSX** extensions);
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-WOLFSSL_LOCAL int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input,
-                                 word16 length, TLSX** extensions);
+WOLFSSL_LOCAL int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input, word16 length);
+WOLFSSL_LOCAL int TLSX_UseCKS(TLSX** extensions, WOLFSSL* ssl, void* heap);
 WOLFSSL_LOCAL int TLSX_CKS_Set(WOLFSSL* ssl, TLSX** extensions);
 #endif
 #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
@@ -4214,10 +4289,6 @@ struct WOLFSSL_CTX {
 #if defined(__APPLE__) && defined(WOLFSSL_SYS_CA_CERTS)
     byte doAppleNativeCertValidationFlag:1;
 #endif /* defined(__APPLE__) && defined(WOLFSSL_SYS_CA_CERTS) */
-#ifdef WOLFSSL_DUAL_ALG_CERTS
-    byte *sigSpec;
-    word16 sigSpecSz;
-#endif
 #if defined(WOLFSSL_SYS_CRYPTO_POLICY)
     int secLevel; /* The security level of system-wide crypto policy. */
 #endif /* WOLFSSL_SYS_CRYPTO_POLICY */
@@ -6303,10 +6374,11 @@ struct WOLFSSL {
     SSLSnifferSecretCb snifferSecretCb;
 #endif /* WOLFSSL_SNIFFER && WOLFSSL_SNIFFER_KEYLOGFILE */
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-    byte *sigSpec;         /* This pointer never owns the memory. */
-    word16 sigSpecSz;
-    byte *peerSigSpec;     /* This pointer always owns the memory. */
-    word16 peerSigSpecSz;
+    int hybridCks; /* Hybrid Certificate Key Selection */
+    word16 hybridSigAlgosSz;
+    word16 hybridPeerSigAlgosSz;
+    byte* hybridSigAlgos;
+    byte* hybridPeerSigAlgos;
 #endif
 #if defined(WOLFSSL_SYS_CRYPTO_POLICY)
     int secLevel; /* The security level of system-wide crypto policy. */
