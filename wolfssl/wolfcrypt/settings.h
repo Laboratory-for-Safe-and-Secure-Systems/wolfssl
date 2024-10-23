@@ -453,12 +453,8 @@
  * ---------------------------------------------------------------------------
  */
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-    #ifdef NO_RSA
-        #error "Need RSA or else dual alg cert example will not work."
-    #endif
-
-    #ifndef HAVE_ECC
-        #error "Need ECDSA or else dual alg cert example will not work."
+    #if defined(NO_RSA) && !defined(HAVE_ECC)
+        #error "Need RSA and/or ECDSA for dual alg certs."
     #endif
 
     #undef WOLFSSL_CERT_GEN

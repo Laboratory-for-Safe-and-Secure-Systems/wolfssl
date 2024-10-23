@@ -1848,7 +1848,7 @@ static int ProcessBufferCertAltPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     void* heap = WOLFSSL_HEAP(ctx, ssl);
     byte keyType = 0;
     int keySz = 0;
-#ifndef NO_RSA
+#if defined(HAVE_ECC) || !defined(NO_RSA)
     word32 idx;
 #endif
 

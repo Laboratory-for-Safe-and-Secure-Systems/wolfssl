@@ -4636,14 +4636,15 @@ WOLFSSL_API int wolfSSL_NoKeyShares(WOLFSSL* ssl);
 #endif
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-#define WOLFSSL_CKS_SIGSPEC_NATIVE      0x0001
-#define WOLFSSL_CKS_SIGSPEC_ALTERNATIVE 0x0002
-#define WOLFSSL_CKS_SIGSPEC_BOTH        0x0003
-#define WOLFSSL_CKS_SIGSPEC_EXTERNAL    0x0004
 
-WOLFSSL_API int wolfSSL_UseCKS(WOLFSSL* ssl, byte *sigSpec, word16 sigSpecSz);
-WOLFSSL_API int wolfSSL_CTX_UseCKS(WOLFSSL_CTX* ctx, byte *sigSpec,
-                                   word16 sigSpecSz);
+/* CKS Options */
+enum {
+    WOLFSSL_CKS_SIGSPEC_NATIVE       = 0x00,
+    WOLFSSL_CKS_SIGSPEC_ALTERNATIVE  = 0x01,
+    WOLFSSL_CKS_SIGSPEC_BOTH         = 0x02,
+    WOLFSSL_CKS_SIGSPEC_BOTH_SWAP    = 0x03,
+};
+
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
 
 /* Secure Renegotiation */
