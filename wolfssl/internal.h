@@ -3573,8 +3573,10 @@ WOLFSSL_LOCAL int TLSX_KeyShare_Parse(WOLFSSL* ssl, const byte* input,
 WOLFSSL_LOCAL int TLSX_KeyShare_Parse_ClientHello(const WOLFSSL* ssl,
         const byte* input, word16 length, TLSX** extensions);
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-WOLFSSL_LOCAL int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input,
-                                 word16 length, TLSX** extensions);
+WOLFSSL_LOCAL int TLSX_CKS_ParseRequest(WOLFSSL* ssl, byte* input,
+                                        word16 length);
+WOLFSSL_LOCAL int TLSX_CKS_ParseResponse(WOLFSSL* ssl, byte* input,
+                                         word16 length);
 WOLFSSL_LOCAL int TLSX_CKS_Set(WOLFSSL* ssl, TLSX** extensions);
 #endif
 #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
@@ -4159,8 +4161,12 @@ struct WOLFSSL_CTX {
     byte doAppleNativeCertValidationFlag:1;
 #endif /* defined(__APPLE__) && defined(WOLFSSL_SYS_CA_CERTS) */
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-    byte *sigSpec;
-    word16 sigSpecSz;
+    byte authSigSpec[WOLFSSL_CKS_SIGSPEC_NUM_OPTIONS];
+    word16 authSigSpecSz;
+    byte authSigSpecUserSet:1;
+    byte verifySigSpec[WOLFSSL_CKS_SIGSPEC_NUM_OPTIONS];
+    word16 verifySigSpecSz;
+    byte verifySigSpecUserSet:1;
 #endif
 };
 
@@ -6199,10 +6205,14 @@ struct WOLFSSL {
     SSLSnifferSecretCb snifferSecretCb;
 #endif /* WOLFSSL_SNIFFER && WOLFSSL_SNIFFER_KEYLOGFILE */
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-    byte *sigSpec;         /* This pointer never owns the memory. */
-    word16 sigSpecSz;
-    byte *peerSigSpec;     /* This pointer always owns the memory. */
-    word16 peerSigSpecSz;
+    byte authSigSpec[WOLFSSL_CKS_SIGSPEC_NUM_OPTIONS];
+    word16 authSigSpecSz;
+    byte verifySigSpec[WOLFSSL_CKS_SIGSPEC_NUM_OPTIONS];
+    word16 verifySigSpecSz;
+    byte authSigSpecUserSet:1;
+    byte authSigSpecPeerUpdated:1;
+    byte verifySigSpecUserSet:1;
+    byte verifySigSpecPeerUpdated:1;
 #endif
 };
 

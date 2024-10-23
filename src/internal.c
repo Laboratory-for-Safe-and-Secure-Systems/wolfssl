@@ -7205,6 +7205,46 @@ int InitHandshakeHashesAndCopy(WOLFSSL* ssl, HS_Hashes* source,
     return ret;
 }
 
+#ifdef WOLFSSL_DUAL_ALG_CERTS
+/* set sane defaults for authentication with dual algorithm certificates
+ * using the CKS extension. */
+static int SetDefaultAuthCKS(WOLFSSL* ssl)
+{
+    /* Check if we have an alternative key loaded */
+    if (ssl->buffers.altKey != NULL && ssl->buffers.altKeyType != 0) {
+        WOLFSSL_MSG("Alternative key loaded, using \"both\" as authCKS");
+        ssl->authSigSpec[0] = WOLFSSL_CKS_SIGSPEC_BOTH;
+        ssl->authSigSpec[1] = WOLFSSL_CKS_SIGSPEC_NATIVE;
+        ssl->authSigSpecSz = 2;
+
+    }
+    else {
+        WOLFSSL_MSG("No alternative key loaded, using \"native\" as authCKS");
+        ssl->authSigSpec[0] = WOLFSSL_CKS_SIGSPEC_NATIVE;
+        ssl->authSigSpecSz = 1;
+    }
+
+    ssl->authSigSpecUserSet = 0;
+    ssl->authSigSpecPeerUpdated = 0;
+
+    return 0;
+}
+
+/* set sane defaults for peer verification with dual algorithm certificates
+ * using the CKS extension. */
+static int SetDefaultVerifyCKS(WOLFSSL* ssl)
+{
+    /* Default to "both" with "native" as a fallback */
+    ssl->verifySigSpec[0] = WOLFSSL_CKS_SIGSPEC_BOTH;
+    ssl->verifySigSpec[1] = WOLFSSL_CKS_SIGSPEC_NATIVE;
+    ssl->verifySigSpecSz = 2;
+    ssl->verifySigSpecUserSet = 0;
+    ssl->verifySigSpecPeerUpdated = 0;
+
+    return 0;
+}
+#endif
+
 /* called if user attempts to reuse WOLFSSL object for a new session.
  * For example wolfSSL_clear() is called then wolfSSL_connect or accept */
 int ReinitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
@@ -7787,8 +7827,32 @@ int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
     (void)wolfSSL_set_secret_cb(ssl, tlsShowSecrets, NULL);
 #endif
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-    ssl->sigSpec = ctx->sigSpec;
-    ssl->sigSpecSz = ctx->sigSpecSz;
+    if (ctx->authSigSpecUserSet) {
+        ssl->authSigSpecUserSet = 1;
+        ssl->authSigSpecSz = ctx->authSigSpecSz;
+        XMEMCPY(ssl->authSigSpec, ctx->authSigSpec, ctx->authSigSpecSz);
+        ssl->authSigSpecPeerUpdated = 0;
+    }
+    else {
+        ret = SetDefaultAuthCKS(ssl);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("SetDefaultAuthCKS failed. err = %d", ret);
+            return ret;
+        }
+    }
+    if (ctx->verifySigSpecUserSet) {
+        ssl->verifySigSpecUserSet = 1;
+        ssl->verifySigSpecSz = ctx->verifySigSpecSz;
+        XMEMCPY(ssl->verifySigSpec, ctx->verifySigSpec, ctx->verifySigSpecSz);
+        ssl->verifySigSpecPeerUpdated = 0;
+    }
+    else {
+        ret = SetDefaultVerifyCKS(ssl);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("SetDefaultVerifyCKS failed. err = %d", ret);
+            return ret;
+        }
+    }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
     /* Returns 0 on success, not WOLFSSL_SUCCESS (1) */
     WOLFSSL_MSG_EX("InitSSL done. return 0 (success)");
@@ -8549,9 +8613,6 @@ void SSL_ResourceFree(WOLFSSL* ssl)
 #if defined(WOLFSSL_HAPROXY)
     wolfSSL_CTX_free(ssl->initial_ctx);
     ssl->initial_ctx = NULL;
-#endif
-#ifdef WOLFSSL_DUAL_ALG_CERTS
-    XFREE(ssl->peerSigSpec, ssl->heap, DYNAMIC_TYPE_TLSX);
 #endif
 }
 
