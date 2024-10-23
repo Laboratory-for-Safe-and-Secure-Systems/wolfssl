@@ -7683,6 +7683,18 @@ static int SendTls13CertificateRequest(WOLFSSL* ssl, byte* reqCtx,
         return ret;
     }
 
+#ifdef WOLFSSL_DUAL_ALG_CERTS
+    /* Enable the CKS feature to make sure a CKS request is sent within
+     * the CertificateRequest message. We do that as we cannot be sure
+     * whether the client supports the feature (although it didn't sent
+     * a request in the ClientHello message). */
+    if (IsAtLeastTLSv1_3(ssl->version)) {
+        ret = TLSX_UseCKS(&ssl->extensions, ssl, ssl->heap);
+        if (ret != 0)
+            return ret;
+    }
+#endif
+
     i = RECORD_HEADER_SZ + HANDSHAKE_HEADER_SZ;
 #ifdef WOLFSSL_DTLS13
     if (ssl->options.dtls)
@@ -7858,24 +7870,75 @@ static WC_INLINE void EncodeSigAlg(byte hashAlgo, byte hsType, byte* output)
 }
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-/* These match up with what the OQS team has defined. */
-#define HYBRID_SA_MAJOR 0xFE
-#define HYBRID_P256_DILITHIUM_LEVEL2_SA_MINOR    0xA1
-#define HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MINOR 0xA2
-#define HYBRID_P384_DILITHIUM_LEVEL3_SA_MINOR    0xA4
-#define HYBRID_P521_DILITHIUM_LEVEL5_SA_MINOR    0xA6
-#define HYBRID_P256_FALCON_LEVEL1_SA_MINOR       0xAF
-#define HYBRID_RSA3072_FALCON_LEVEL1_SA_MINOR    0xB0
-#define HYBRID_P521_FALCON_LEVEL5_SA_MINOR       0xB2
+
+/* These match up with what the OQS team has defined
+ * (except for the MLDSA ones). */
+#define HYBRID_P256_DILITHIUM_LEVEL2_SA_MAJOR    0xFE
+#define HYBRID_P256_DILITHIUM_LEVEL2_SA_MINOR    0xD3
+
+#define HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MAJOR 0xFE
+#define HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MINOR 0xD4
+
+#define HYBRID_P384_DILITHIUM_LEVEL3_SA_MAJOR    0xFE
+#define HYBRID_P384_DILITHIUM_LEVEL3_SA_MINOR    0xD5
+
+#define HYBRID_P521_DILITHIUM_LEVEL5_SA_MAJOR    0xFE
+#define HYBRID_P521_DILITHIUM_LEVEL5_SA_MINOR    0xD6
+
+#define HYBRID_P256_ML_DSA_44_SA_MAJOR           0xFF
+#define HYBRID_P256_ML_DSA_44_SA_MINOR           0xD3
+
+#define HYBRID_RSA3072_ML_DSA_44_SA_MAJOR        0xFF
+#define HYBRID_RSA3072_ML_DSA_44_SA_MINOR        0xD4
+
+#define HYBRID_P384_ML_DSA_65_SA_MAJOR           0xFF
+#define HYBRID_P384_ML_DSA_65_SA_MINOR           0xD5
+
+#define HYBRID_P521_ML_DSA_87_SA_MAJOR             0xFF
+#define HYBRID_P521_ML_DSA_87_SA_MINOR             0xD6
+
+#define HYBRID_P256_FALCON_LEVEL1_SA_MAJOR       0xFE
+#define HYBRID_P256_FALCON_LEVEL1_SA_MINOR       0xD8
+
+#define HYBRID_RSA3072_FALCON_LEVEL1_SA_MAJOR    0xFE
+#define HYBRID_RSA3072_FALCON_LEVEL1_SA_MINOR    0xD9
+
+#define HYBRID_P521_FALCON_LEVEL5_SA_MAJOR       0xFE
+#define HYBRID_P521_FALCON_LEVEL5_SA_MINOR       0xDB
 
 /* Custom defined ones for PQC first */
-#define HYBRID_DILITHIUM_LEVEL2_P256_SA_MINOR    0xD1
-#define HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MINOR 0xD2
-#define HYBRID_DILITHIUM_LEVEL3_P384_SA_MINOR    0xD3
-#define HYBRID_DILITHIUM_LEVEL5_P521_SA_MINOR    0xD4
-#define HYBRID_FALCON_LEVEL1_P256_SA_MINOR       0xD5
-#define HYBRID_FALCON_LEVEL1_RSA3072_SA_MINOR    0xD6
-#define HYBRID_FALCON_LEVEL5_P521_SA_MINOR       0xD7
+#define HYBRID_DILITHIUM_LEVEL2_P256_SA_MAJOR    0xFF
+#define HYBRID_DILITHIUM_LEVEL2_P256_SA_MINOR    0xE1
+
+#define HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MAJOR 0xFF
+#define HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MINOR 0xE2
+
+#define HYBRID_DILITHIUM_LEVEL3_P384_SA_MAJOR    0xFF
+#define HYBRID_DILITHIUM_LEVEL3_P384_SA_MINOR    0xE3
+
+#define HYBRID_DILITHIUM_LEVEL5_P521_SA_MAJOR    0xFF
+#define HYBRID_DILITHIUM_LEVEL5_P521_SA_MINOR    0xE4
+
+#define HYBRID_ML_DSA_44_P256_SA_MAJOR           0xFF
+#define HYBRID_ML_DSA_44_P256_SA_MINOR           0xE5
+
+#define HYBRID_ML_DSA_44_RSA3072_SA_MAJOR        0xFF
+#define HYBRID_ML_DSA_44_RSA3072_SA_MINOR        0xE6
+
+#define HYBRID_ML_DSA_65_P384_SA_MAJOR           0xFF
+#define HYBRID_ML_DSA_65_P384_SA_MINOR           0xE7
+
+#define HYBRID_ML_DSA_87_P521_SA_MAJOR           0xFF
+#define HYBRID_ML_DSA_87_P521_SA_MINOR           0xE8
+
+#define HYBRID_FALCON_LEVEL1_P256_SA_MAJOR       0xFF
+#define HYBRID_FALCON_LEVEL1_P256_SA_MINOR       0xE9
+
+#define HYBRID_FALCON_LEVEL1_RSA3072_SA_MAJOR    0xFF
+#define HYBRID_FALCON_LEVEL1_RSA3072_SA_MINOR    0xEA
+
+#define HYBRID_FALCON_LEVEL5_P521_SA_MAJOR       0xFF
+#define HYBRID_FALCON_LEVEL5_P521_SA_MINOR       0xEB
 
 
 static void EncodeDualSigAlg(byte sigAlg, byte altSigAlg, byte* output)
@@ -7885,63 +7948,105 @@ static void EncodeDualSigAlg(byte sigAlg, byte altSigAlg, byte* output)
     output[1] = 0x0;
 
     if (sigAlg == ecc_dsa_sa_algo && altSigAlg == dilithium_level2_sa_algo) {
+        output[0] = HYBRID_P256_DILITHIUM_LEVEL2_SA_MAJOR;
         output[1] = HYBRID_P256_DILITHIUM_LEVEL2_SA_MINOR;
     }
     else if (sigAlg == rsa_pss_sa_algo &&
              altSigAlg == dilithium_level2_sa_algo) {
+        output[0] = HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MAJOR;
         output[1] = HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MINOR;
     }
     else if (sigAlg == ecc_dsa_sa_algo &&
              altSigAlg == dilithium_level3_sa_algo) {
+        output[0] = HYBRID_P384_DILITHIUM_LEVEL3_SA_MAJOR;
         output[1] = HYBRID_P384_DILITHIUM_LEVEL3_SA_MINOR;
     }
     else if (sigAlg == ecc_dsa_sa_algo &&
              altSigAlg == dilithium_level5_sa_algo) {
+        output[0] = HYBRID_P521_DILITHIUM_LEVEL5_SA_MAJOR;
         output[1] = HYBRID_P521_DILITHIUM_LEVEL5_SA_MINOR;
+    }
+    else if (sigAlg == ecc_dsa_sa_algo && altSigAlg == ml_dsa_44_sa_algo) {
+        output[0] = HYBRID_P256_ML_DSA_44_SA_MAJOR;
+        output[1] = HYBRID_P256_ML_DSA_44_SA_MINOR;
+    }
+    else if (sigAlg == rsa_pss_sa_algo && altSigAlg == ml_dsa_44_sa_algo) {
+        output[0] = HYBRID_RSA3072_ML_DSA_44_SA_MAJOR;
+        output[1] = HYBRID_RSA3072_ML_DSA_44_SA_MINOR;
+    }
+    else if (sigAlg == ecc_dsa_sa_algo && altSigAlg == ml_dsa_65_sa_algo) {
+        output[0] = HYBRID_P384_ML_DSA_65_SA_MAJOR;
+        output[1] = HYBRID_P384_ML_DSA_65_SA_MINOR;
+    }
+    else if (sigAlg == ecc_dsa_sa_algo && altSigAlg == ml_dsa_87_sa_algo) {
+        output[0] = HYBRID_P521_ML_DSA_87_SA_MAJOR;
+        output[1] = HYBRID_P521_ML_DSA_87_SA_MINOR;
     }
     else if (sigAlg == ecc_dsa_sa_algo &&
              altSigAlg == falcon_level1_sa_algo) {
+        output[0] = HYBRID_P256_FALCON_LEVEL1_SA_MAJOR;
         output[1] = HYBRID_P256_FALCON_LEVEL1_SA_MINOR;
     }
     else if (sigAlg == rsa_pss_sa_algo &&
              altSigAlg == falcon_level1_sa_algo) {
+        output[0] = HYBRID_RSA3072_FALCON_LEVEL1_SA_MAJOR;
         output[1] = HYBRID_RSA3072_FALCON_LEVEL1_SA_MINOR;
     }
     else if (sigAlg == ecc_dsa_sa_algo &&
              altSigAlg == falcon_level5_sa_algo) {
+        output[0] = HYBRID_P521_FALCON_LEVEL5_SA_MAJOR;
         output[1] = HYBRID_P521_FALCON_LEVEL5_SA_MINOR;
     }
     else if (sigAlg == dilithium_level2_sa_algo &&
              altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_DILITHIUM_LEVEL2_P256_SA_MAJOR;
         output[1] = HYBRID_DILITHIUM_LEVEL2_P256_SA_MINOR;
     }
     else if (sigAlg == dilithium_level2_sa_algo &&
              altSigAlg == rsa_pss_sa_algo) {
+        output[0] = HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MAJOR;
         output[1] = HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MINOR;
     }
     else if (sigAlg == dilithium_level3_sa_algo &&
              altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_DILITHIUM_LEVEL3_P384_SA_MAJOR;
         output[1] = HYBRID_DILITHIUM_LEVEL3_P384_SA_MINOR;
     }
     else if (sigAlg == dilithium_level5_sa_algo &&
              altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_DILITHIUM_LEVEL5_P521_SA_MAJOR;
         output[1] = HYBRID_DILITHIUM_LEVEL5_P521_SA_MINOR;
+    }
+    else if (sigAlg == ml_dsa_44_sa_algo && altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_ML_DSA_44_P256_SA_MAJOR;
+        output[1] = HYBRID_ML_DSA_44_P256_SA_MINOR;
+    }
+    else if (sigAlg == ml_dsa_44_sa_algo && altSigAlg == rsa_pss_sa_algo) {
+        output[0] = HYBRID_ML_DSA_44_RSA3072_SA_MAJOR;
+        output[1] = HYBRID_ML_DSA_44_RSA3072_SA_MINOR;
+    }
+    else if (sigAlg == ml_dsa_65_sa_algo && altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_ML_DSA_65_P384_SA_MAJOR;
+        output[1] = HYBRID_ML_DSA_65_P384_SA_MINOR;
+    }
+    else if (sigAlg == ml_dsa_87_sa_algo && altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_ML_DSA_87_P521_SA_MAJOR;
+        output[1] = HYBRID_ML_DSA_87_P521_SA_MINOR;
     }
     else if (sigAlg == falcon_level1_sa_algo &&
              altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_FALCON_LEVEL1_P256_SA_MAJOR;
         output[1] = HYBRID_FALCON_LEVEL1_P256_SA_MINOR;
     }
     else if (sigAlg == falcon_level1_sa_algo &&
              altSigAlg == rsa_pss_sa_algo) {
+        output[0] = HYBRID_FALCON_LEVEL1_RSA3072_SA_MAJOR;
         output[1] = HYBRID_FALCON_LEVEL1_RSA3072_SA_MINOR;
     }
     else if (sigAlg == falcon_level5_sa_algo &&
              altSigAlg == ecc_dsa_sa_algo) {
+        output[0] = HYBRID_FALCON_LEVEL5_P521_SA_MAJOR;
         output[1] = HYBRID_FALCON_LEVEL5_P521_SA_MINOR;
-    }
-
-    if (output[1] != 0x0) {
-        output[0] = HYBRID_SA_MAJOR;
     }
 }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
@@ -8068,77 +8173,134 @@ static WC_INLINE int DecodeTls13SigAlg(byte* input, byte* hashAlgo,
 static WC_INLINE int DecodeTls13HybridSigAlg(byte* input, byte* hashAlg,
                                              byte *sigAlg, byte *altSigAlg)
 {
-
-    if (input[0] != HYBRID_SA_MAJOR) {
-        return INVALID_PARAMETER;
-    }
-
-    if (input[1] == HYBRID_P256_DILITHIUM_LEVEL2_SA_MINOR) {
+    if ((input[0] == HYBRID_P256_DILITHIUM_LEVEL2_SA_MAJOR) &&
+        (input[1] == HYBRID_P256_DILITHIUM_LEVEL2_SA_MINOR)) {
         *sigAlg = ecc_dsa_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = dilithium_level2_sa_algo;
     }
-    else if (input[1] == HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MINOR) {
+    else if ((input[0] == HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MAJOR) &&
+             (input[1] == HYBRID_RSA3072_DILITHIUM_LEVEL2_SA_MINOR)) {
         *sigAlg = rsa_pss_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = dilithium_level2_sa_algo;
     }
-    else if (input[1] == HYBRID_P384_DILITHIUM_LEVEL3_SA_MINOR) {
+    else if ((input[0] == HYBRID_P384_DILITHIUM_LEVEL3_SA_MAJOR) &&
+             (input[1] == HYBRID_P384_DILITHIUM_LEVEL3_SA_MINOR)) {
         *sigAlg = ecc_dsa_sa_algo;
         *hashAlg = sha384_mac;
         *altSigAlg = dilithium_level3_sa_algo;
     }
-    else if (input[1] == HYBRID_P521_DILITHIUM_LEVEL5_SA_MINOR) {
+    else if ((input[0] == HYBRID_P521_DILITHIUM_LEVEL5_SA_MAJOR) &&
+             (input[1] == HYBRID_P521_DILITHIUM_LEVEL5_SA_MINOR)) {
         *sigAlg = ecc_dsa_sa_algo;
         *hashAlg = sha512_mac;
         *altSigAlg = dilithium_level5_sa_algo;
     }
-    else if (input[1] == HYBRID_P256_FALCON_LEVEL1_SA_MINOR) {
+    else if ((input[0] == HYBRID_P256_ML_DSA_44_SA_MAJOR) &&
+             (input[1] == HYBRID_P256_ML_DSA_44_SA_MINOR)) {
+        *sigAlg = ecc_dsa_sa_algo;
+        *hashAlg = sha256_mac;
+        *altSigAlg = ml_dsa_44_sa_algo;
+    }
+    else if ((input[0] == HYBRID_RSA3072_ML_DSA_44_SA_MAJOR) &&
+             (input[1] == HYBRID_RSA3072_ML_DSA_44_SA_MINOR)) {
+        *sigAlg = rsa_pss_sa_algo;
+        *hashAlg = sha256_mac;
+        *altSigAlg = ml_dsa_44_sa_algo;
+    }
+    else if ((input[0] == HYBRID_P384_ML_DSA_65_SA_MAJOR) &&
+             (input[1] == HYBRID_P384_ML_DSA_65_SA_MINOR)) {
+        *sigAlg = ecc_dsa_sa_algo;
+        *hashAlg = sha384_mac;
+        *altSigAlg = ml_dsa_65_sa_algo;
+    }
+    else if ((input[0] == HYBRID_P521_ML_DSA_87_SA_MAJOR) &&
+             (input[1] == HYBRID_P521_ML_DSA_87_SA_MINOR)) {
+        *sigAlg = ecc_dsa_sa_algo;
+        *hashAlg = sha512_mac;
+        *altSigAlg = ml_dsa_87_sa_algo;
+    }
+    else if ((input[0] == HYBRID_P256_FALCON_LEVEL1_SA_MAJOR) &&
+             (input[1] == HYBRID_P256_FALCON_LEVEL1_SA_MINOR)) {
         *sigAlg = ecc_dsa_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = falcon_level1_sa_algo;
     }
-    else if (input[1] == HYBRID_RSA3072_FALCON_LEVEL1_SA_MINOR) {
+    else if ((input[0] == HYBRID_RSA3072_FALCON_LEVEL1_SA_MAJOR) &&
+             (input[1] == HYBRID_RSA3072_FALCON_LEVEL1_SA_MINOR)) {
         *sigAlg = rsa_pss_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = falcon_level1_sa_algo;
     }
-    else if (input[1] == HYBRID_P521_FALCON_LEVEL5_SA_MINOR) {
+    else if ((input[0] == HYBRID_P521_FALCON_LEVEL5_SA_MAJOR) &&
+             (input[1] == HYBRID_P521_FALCON_LEVEL5_SA_MINOR)) {
         *sigAlg = ecc_dsa_sa_algo;
         *hashAlg = sha512_mac;
         *altSigAlg = falcon_level5_sa_algo;
     }
-    else if (input[1] == HYBRID_DILITHIUM_LEVEL2_P256_SA_MINOR) {
+    else if ((input[0] == HYBRID_DILITHIUM_LEVEL2_P256_SA_MAJOR) &&
+             (input[1] == HYBRID_DILITHIUM_LEVEL2_P256_SA_MINOR)) {
         *sigAlg = dilithium_level2_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = ecc_dsa_sa_algo;
     }
-    else if (input[1] == HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MINOR) {
+    else if ((input[0] == HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MAJOR) &&
+             (input[1] == HYBRID_DILITHIUM_LEVEL2_RSA3072_SA_MINOR)) {
         *sigAlg = dilithium_level2_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = rsa_pss_sa_algo;
     }
-    else if (input[1] == HYBRID_DILITHIUM_LEVEL3_P384_SA_MINOR) {
+    else if ((input[0] == HYBRID_DILITHIUM_LEVEL3_P384_SA_MAJOR) &&
+             (input[1] == HYBRID_DILITHIUM_LEVEL3_P384_SA_MINOR)) {
         *sigAlg = dilithium_level3_sa_algo;
         *hashAlg = sha384_mac;
         *altSigAlg = ecc_dsa_sa_algo;
     }
-    else if (input[1] == HYBRID_DILITHIUM_LEVEL5_P521_SA_MINOR) {
+    else if ((input[0] == HYBRID_DILITHIUM_LEVEL5_P521_SA_MAJOR) &&
+             (input[1] == HYBRID_DILITHIUM_LEVEL5_P521_SA_MINOR)) {
         *sigAlg = dilithium_level5_sa_algo;
         *hashAlg = sha512_mac;
         *altSigAlg = ecc_dsa_sa_algo;
     }
-    else if (input[1] == HYBRID_FALCON_LEVEL1_P256_SA_MINOR) {
+    else if ((input[0] == HYBRID_ML_DSA_44_P256_SA_MAJOR) &&
+             (input[1] == HYBRID_ML_DSA_44_P256_SA_MINOR)) {
+        *sigAlg = ml_dsa_44_sa_algo;
+        *hashAlg = sha256_mac;
+        *altSigAlg = ecc_dsa_sa_algo;
+    }
+    else if ((input[0] == HYBRID_ML_DSA_44_RSA3072_SA_MAJOR) &&
+             (input[1] == HYBRID_ML_DSA_44_RSA3072_SA_MINOR)) {
+        *sigAlg = ml_dsa_44_sa_algo;
+        *hashAlg = sha256_mac;
+        *altSigAlg = rsa_pss_sa_algo;
+    }
+    else if ((input[0] == HYBRID_ML_DSA_65_P384_SA_MAJOR) &&
+             (input[1] == HYBRID_ML_DSA_65_P384_SA_MINOR)) {
+        *sigAlg = ml_dsa_65_sa_algo;
+        *hashAlg = sha384_mac;
+        *altSigAlg = ecc_dsa_sa_algo;
+    }
+    else if ((input[0] == HYBRID_ML_DSA_87_P521_SA_MAJOR) &&
+             (input[1] == HYBRID_ML_DSA_87_P521_SA_MINOR)) {
+        *sigAlg = ml_dsa_87_sa_algo;
+        *hashAlg = sha512_mac;
+        *altSigAlg = ecc_dsa_sa_algo;
+    }
+    else if ((input[0] == HYBRID_FALCON_LEVEL1_P256_SA_MAJOR) &&
+             (input[1] == HYBRID_FALCON_LEVEL1_P256_SA_MINOR)) {
         *sigAlg = falcon_level1_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = ecc_dsa_sa_algo;
     }
-    else if (input[1] == HYBRID_FALCON_LEVEL1_RSA3072_SA_MINOR) {
+    else if ((input[0] == HYBRID_FALCON_LEVEL1_RSA3072_SA_MAJOR) &&
+             (input[1] == HYBRID_FALCON_LEVEL1_RSA3072_SA_MINOR)) {
         *sigAlg = falcon_level1_sa_algo;
         *hashAlg = sha256_mac;
         *altSigAlg = rsa_pss_sa_algo;
     }
-    else if (input[1] == HYBRID_FALCON_LEVEL5_P521_SA_MINOR) {
+    else if ((input[0] == HYBRID_FALCON_LEVEL5_P521_SA_MAJOR) &&
+             (input[1] == HYBRID_FALCON_LEVEL5_P521_SA_MINOR)) {
         *sigAlg = falcon_level5_sa_algo;
         *hashAlg = sha512_mac;
         *altSigAlg = ecc_dsa_sa_algo;
@@ -8620,6 +8782,7 @@ static int SendTls13Certificate(WOLFSSL* ssl)
         if (ret == 1) {
             if ((wolfSSL_CTX_use_certificate(ssl->ctx, x509) == WOLFSSL_SUCCESS) &&
                 (wolfSSL_CTX_use_PrivateKey(ssl->ctx, pkey) == WOLFSSL_SUCCESS)) {
+                /* ToDo: Update CKS setting here if enabled... */
                 ssl->options.sendVerify = SEND_CERT;
             }
             wolfSSL_X509_free(x509);
@@ -9079,9 +9242,8 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
             }
             else {
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-                if (ssl->sigSpec != NULL &&
-                    *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_ALTERNATIVE) {
-                    /* In the case of alternative, we swap in the alt. */
+                if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_ALTERNATE_4) {
+                    /* In the case of alternate type 4, we swap in the alt. */
                     if (ssl->buffers.altKey == NULL) {
                         ERROR_OUT(NO_PRIVATE_KEY, exit_scv);
                     }
@@ -9155,16 +9317,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
             }
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->peerSigSpec == NULL) {
-                /* The peer did not respond. We didn't send CKS or they don't
-                 * support it. Either way, we do not need to handle dual
-                 * key/sig case. */
-                ssl->sigSpec = NULL;
-                ssl->sigSpecSz = 0;
-            }
-
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+            if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 /* The native was already decoded. Now we need to do the
                  * alternative. Note that no swap was done because this case is
                  * both native and alternative, not just alternative. */
@@ -9225,8 +9378,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
             }
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if ((ssl->sigSpec != NULL) &&
-                (*ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) &&
+            if ((ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) &&
                 (args->altSigData == NULL)) {
                 word32 sigLen = MAX_SIG_DATA_SZ;
                 if (ssl->hsAltType == DYNAMIC_TYPE_RSA &&
@@ -9249,8 +9401,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 goto exit_scv;
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if ((ssl->sigSpec != NULL) &&
-                (*ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH)) {
+            if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 XMEMCPY(args->altSigData, args->sigData, args->sigDataSz);
                 args->altSigDataSz = args->sigDataSz;
             }
@@ -9323,9 +9474,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
         #endif /* HAVE_DILITHIUM */
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
-
+            if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
             #ifndef NO_RSA
                 if (ssl->hsAltType == DYNAMIC_TYPE_RSA) {
                     /* build encoded signature buffer */
@@ -9368,8 +9517,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
         {
             byte* sigOut = args->verify + HASH_SIG_SIZE + VERIFY_HEADER;
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+            if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 /* As we have two signatures in the message, we store
                  * the length of each before the actual signature. This
                  * is necessary, as we could have two algorithms with
@@ -9486,8 +9634,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
             }
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+            if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 /* Add signature length for the first signature. */
                 c16toa((word16)args->sigLen, sigOut - OPAQUE16_LEN);
                 args->length += OPAQUE16_LEN;
@@ -9596,8 +9743,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                     ssl->buffers.key);
             }
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH &&
+            if (ssl->authSigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH &&
                 ssl->hsAltType == DYNAMIC_TYPE_RSA) {
                 /* check for signature faults */
                 ret = VerifyRsaSign(ssl, args->altSigData, args->altSigLen,
@@ -10077,20 +10223,11 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
             }
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->peerSigSpec == NULL) {
-                /* The peer did not respond. We didn't send CKS or they don't
-                 * support it. Either way, we do not need to handle dual
-                 * key/sig case. */
-                ssl->sigSpec = NULL;
-                ssl->sigSpecSz = 0;
-            }
-
             /* If no CKS extension or either native or alternative, then just
              * get a normal sigalgo.  But if BOTH, then get the native and alt
              * sig algos. */
-            if (ssl->sigSpec == NULL ||
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_NATIVE ||
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_ALTERNATIVE) {
+            if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_NATIVE ||
+                ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_ALTERNATE_4) {
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
                 ret = DecodeTls13SigAlg(input + args->idx,
                         &ssl->options.peerHashAlgo, &ssl->options.peerSigAlgo);
@@ -10122,8 +10259,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
             }
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if ((ssl->sigSpec != NULL) &&
-                (*ssl->sigSpec != WOLFSSL_CKS_SIGSPEC_NATIVE)) {
+            if (ssl->verifySigSpec[0] != WOLFSSL_CKS_SIGSPEC_NATIVE) {
 
                 word16 sa;
                 if (args->altSigAlgo == 0)
@@ -10179,7 +10315,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 if (ret != 0)
                     ERROR_OUT(ret, exit_dcv);
 
-                if (*ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_ALTERNATIVE) {
+                if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_ALTERNATE_4) {
                     /* Now swap in the alternative by removing the native.
                      * sa contains the alternative signature type. */
                 #ifndef NO_RSA
@@ -10323,8 +10459,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
 
             args->sigSz = args->sz;
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+            if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 /* In case we received two signatures, both of them are encoded
                  * with their size as 16-bit integeter prior in memory. Hence,
                  * we can decode both lengths here now. */
@@ -10353,8 +10488,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 sig = input + args->idx;
             #ifdef WOLFSSL_DUAL_ALG_CERTS
                 /* Check if our alternative signature was RSA */
-                if (ssl->sigSpec != NULL &&
-                    *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+                if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                     if (ssl->options.peerSigAlgo != rsa_pss_sa_algo) {
                         /* We have to skip the first signature (length field
                          * and signature itself) and the length field of the
@@ -10389,8 +10523,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 goto exit_dcv;
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if ((ssl->sigSpec != NULL) &&
-                (*ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH)) {
+            if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 args->altSigData = (byte*)XMALLOC(MAX_SIG_DATA_SZ, ssl->heap,
                                                         DYNAMIC_TYPE_SIGNATURE);
                 if (args->altSigData == NULL) {
@@ -10418,8 +10551,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
             }
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if ((ssl->sigSpec != NULL) &&
-                (*ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) &&
+            if ((ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) &&
                 (args->altSigAlgo == ecc_dsa_sa_algo) &&
                 (ssl->peerEccDsaKeyPresent)) {
                 ret = CreateECCEncodedSig(args->altSigData,
@@ -10441,8 +10573,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
         {
             sig = input + args->idx;
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+            if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 /* As we have two signatures in the message, we stored
                  * the length of each before the actual signature. This
                  * is necessary, as we could have two algorithms with
@@ -10625,8 +10756,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
             }
 
         #ifdef WOLFSSL_DUAL_ALG_CERTS
-            if (ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+            if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 /* Move forward to the alternative signature. */
                 sig += args->sigSz + OPAQUE16_LEN;
 
@@ -10763,8 +10893,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 int sigAlgo = ssl->options.peerSigAlgo;
             #ifdef WOLFSSL_DUAL_ALG_CERTS
                 /* Check if our alternative signature was RSA */
-                if (ssl->sigSpec != NULL &&
-                    *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH &&
+                if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH &&
                     ssl->options.peerSigAlgo != rsa_pss_sa_algo) {
                     sigAlgo = args->altSigAlgo;
                 }
@@ -10780,8 +10909,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 FreeKey(ssl, DYNAMIC_TYPE_RSA, (void**)&ssl->peerRsaKey);
             #ifdef WOLFSSL_DUAL_ALG_CERTS
                 /* Check if our alternative signature was RSA */
-                if (ssl->sigSpec != NULL &&
-                    *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH &&
+                if (ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH &&
                     ssl->options.peerSigAlgo != rsa_pss_sa_algo) {
                     args->altPeerAuthGood = 1;
                 }
@@ -10800,8 +10928,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
         {
 #ifdef WOLFSSL_DUAL_ALG_CERTS
             if (ssl->options.peerAuthGood &&
-                ssl->sigSpec != NULL &&
-                *ssl->sigSpec == WOLFSSL_CKS_SIGSPEC_BOTH) {
+                ssl->verifySigSpec[0] == WOLFSSL_CKS_SIGSPEC_BOTH) {
                 ssl->options.peerAuthGood = args->altPeerAuthGood;
             }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
@@ -13710,25 +13837,55 @@ int wolfSSL_NoKeyShares(WOLFSSL* ssl)
 #endif
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-int wolfSSL_UseCKS(WOLFSSL* ssl, byte *sigSpec, word16 sigSpecSz)
+int wolfSSL_UseAuthCKS(WOLFSSL* ssl, byte *sigSpec, word16 sigSpecSz)
 {
     if (ssl == NULL || !IsAtLeastTLSv1_3(ssl->ctx->method->version) ||
         sigSpec == NULL || sigSpecSz == 0)
         return BAD_FUNC_ARG;
 
-    ssl->sigSpec = sigSpec;
-    ssl->sigSpecSz = sigSpecSz;
+    ssl->authSigSpecSz = min(sigSpecSz, sizeof(ssl->authSigSpec));
+    XMEMCPY(ssl->authSigSpec, sigSpec, ssl->authSigSpecSz);
+    ssl->authSigSpecUserSet = 1;
+
     return WOLFSSL_SUCCESS;
 }
 
-int wolfSSL_CTX_UseCKS(WOLFSSL_CTX* ctx, byte *sigSpec, word16 sigSpecSz)
+int wolfSSL_CTX_UseAuthCKS(WOLFSSL_CTX* ctx, byte *sigSpec, word16 sigSpecSz)
 {
     if (ctx == NULL || !IsAtLeastTLSv1_3(ctx->method->version) ||
         sigSpec == NULL || sigSpecSz == 0)
         return BAD_FUNC_ARG;
 
-    ctx->sigSpec = sigSpec;
-    ctx->sigSpecSz = sigSpecSz;
+    ctx->authSigSpecSz = min(sigSpecSz, sizeof(ctx->authSigSpec));
+    XMEMCPY(ctx->authSigSpec, sigSpec, ctx->authSigSpecSz);
+    ctx->authSigSpecUserSet = 1;
+
+    return WOLFSSL_SUCCESS;
+}
+
+int wolfSSL_UseVerifyCKS(WOLFSSL* ssl, byte *sigSpec, word16 sigSpecSz)
+{
+    if (ssl == NULL || !IsAtLeastTLSv1_3(ssl->ctx->method->version) ||
+        sigSpec == NULL || sigSpecSz == 0)
+        return BAD_FUNC_ARG;
+
+    ssl->verifySigSpecSz = min(sigSpecSz, sizeof(ssl->verifySigSpec));
+    XMEMCPY(ssl->verifySigSpec, sigSpec, ssl->verifySigSpecSz);
+    ssl->verifySigSpecUserSet = 1;
+
+    return WOLFSSL_SUCCESS;
+}
+
+int wolfSSL_CTX_UseVerifyCKS(WOLFSSL_CTX* ctx, byte *sigSpec, word16 sigSpecSz)
+{
+    if (ctx == NULL || !IsAtLeastTLSv1_3(ctx->method->version) ||
+        sigSpec == NULL || sigSpecSz == 0)
+        return BAD_FUNC_ARG;
+
+    ctx->verifySigSpecSz = min(sigSpecSz, sizeof(ctx->verifySigSpec));
+    XMEMCPY(ctx->verifySigSpec, sigSpec, ctx->verifySigSpecSz);
+    ctx->verifySigSpecUserSet = 1;
+
     return WOLFSSL_SUCCESS;
 }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */

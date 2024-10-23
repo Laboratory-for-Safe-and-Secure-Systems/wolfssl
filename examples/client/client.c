@@ -2288,7 +2288,7 @@ THREAD_RETURN WOLFSSL_THREAD client_test(void* args)
      * used in the call to wolfSSL_UseCKS(). */
     byte cks_order[3] = {
         WOLFSSL_CKS_SIGSPEC_BOTH,
-        WOLFSSL_CKS_SIGSPEC_ALTERNATIVE,
+        WOLFSSL_CKS_SIGSPEC_ALTERNATE_4,
         WOLFSSL_CKS_SIGSPEC_NATIVE,
     };
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
@@ -3802,9 +3802,9 @@ THREAD_RETURN WOLFSSL_THREAD client_test(void* args)
     }
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-    if (!wolfSSL_UseCKS(ssl, cks_order, sizeof(cks_order))) {
+    if (!wolfSSL_UseVerifyCKS(ssl, cks_order, sizeof(cks_order))) {
         wolfSSL_CTX_free(ctx); ctx = NULL;
-        err_sys("unable to set the CKS order.");
+        err_sys("unable to set the verify CKS order.");
     }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
 

@@ -4361,14 +4361,29 @@ WOLFSSL_API int wolfSSL_NoKeyShares(WOLFSSL* ssl);
 #endif
 
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-#define WOLFSSL_CKS_SIGSPEC_NATIVE      0x0001
-#define WOLFSSL_CKS_SIGSPEC_ALTERNATIVE 0x0002
-#define WOLFSSL_CKS_SIGSPEC_BOTH        0x0003
-#define WOLFSSL_CKS_SIGSPEC_EXTERNAL    0x0004
 
-WOLFSSL_API int wolfSSL_UseCKS(WOLFSSL* ssl, byte *sigSpec, word16 sigSpecSz);
-WOLFSSL_API int wolfSSL_CTX_UseCKS(WOLFSSL_CTX* ctx, byte *sigSpec,
+/* CKS Options */
+enum {
+    WOLFSSL_CKS_SIGSPEC_NATIVE       = 0x00,
+    WOLFSSL_CKS_SIGSPEC_DEFAULT      = 0x01,
+    WOLFSSL_CKS_SIGSPEC_ALTERNATE_2  = 0x02,
+    WOLFSSL_CKS_SIGSPEC_ALTERNATE_3  = 0x03,
+    WOLFSSL_CKS_SIGSPEC_ALTERNATE_4  = 0x04,
+    WOLFSSL_CKS_SIGSPEC_BOTH         = 0x05,
+    WOLFSSL_CKS_SIGSPEC_EXTERNAL     = 0x06,
+
+    WOLFSSL_CKS_SIGSPEC_NUM_OPTIONS /* Must be last */
+};
+
+WOLFSSL_API int wolfSSL_UseAuthCKS(WOLFSSL* ssl, byte *sigSpec,
                                    word16 sigSpecSz);
+WOLFSSL_API int wolfSSL_CTX_UseAuthCKS(WOLFSSL_CTX* ctx, byte *sigSpec,
+                                       word16 sigSpecSz);
+
+WOLFSSL_API int wolfSSL_UseVerifyCKS(WOLFSSL* ssl, byte *sigSpec,
+                                     word16 sigSpecSz);
+WOLFSSL_API int wolfSSL_CTX_UseVerifyCKS(WOLFSSL_CTX* ctx, byte *sigSpec,
+                                         word16 sigSpecSz);
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
 
 /* Secure Renegotiation */
