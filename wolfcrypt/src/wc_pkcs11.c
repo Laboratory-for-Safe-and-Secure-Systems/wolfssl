@@ -1628,6 +1628,10 @@ static int Pkcs11CreateDilithiumPublicKey(CK_OBJECT_HANDLE* handle,
     /* Mandatory entries + 3 optional. */
     CK_ULONG keyTmplCnt = sizeof(keyTemplate) / sizeof(*keyTemplate) - 3;
 
+    if (!key->pubKeySet) {
+        ret = BAD_FUNC_ARG;
+    }
+
     if (key->labelLen > 0) {
         keyTemplate[keyTmplCnt].type       = CKA_LABEL;
         keyTemplate[keyTmplCnt].pValue     = key->label;
@@ -2046,14 +2050,14 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
                 CK_MECHANISM_INFO mechInfo;
 
                 ret = Pkcs11MechAvail(&session, CKM_ML_DSA, &mechInfo);
-                if (ret == 0) {
+                if (ret == 0 && dilithiumKey->prvKeySet) {
                     ret = Pkcs11CreateDilithiumPrivateKey(&privKey,
                                                           &session,
                                                           dilithiumKey,
                                                           &mechInfo,
                                                           persistent);
                 }
-                if (ret == 0) {
+                if (ret == 0 && dilithiumKey->pubKeySet) {
                     CK_OBJECT_HANDLE pubKey = NULL_PTR;
                     /* Store public key for validation with cert. */
                     ret = Pkcs11CreateDilithiumPublicKey(&pubKey,
@@ -4633,12 +4637,12 @@ static int Pkcs11GetDilithiumPublicKey(dilithium_key* key,
         PKCS11_DUMP_TEMPLATE("Dilithium Public Key", tmpl, tmplCnt);
     }
     if (ret == 0) {
-        if (pubKeySize == DILITHIUM_LEVEL2_PUB_KEY_SIZE)
-            wc_dilithium_set_level(key, 2);
-        else if (pubKeySize == DILITHIUM_LEVEL3_PUB_KEY_SIZE)
-            wc_dilithium_set_level(key, 3);
-        else if (pubKeySize == DILITHIUM_LEVEL5_PUB_KEY_SIZE)
-            wc_dilithium_set_level(key, 5);
+        if (pubKeySize == ML_DSA_LEVEL2_PUB_KEY_SIZE)
+            wc_dilithium_set_level(key, WC_ML_DSA_44);
+        else if (pubKeySize == ML_DSA_LEVEL3_PUB_KEY_SIZE)
+            wc_dilithium_set_level(key, WC_ML_DSA_65);
+        else if (pubKeySize == ML_DSA_LEVEL5_PUB_KEY_SIZE)
+            wc_dilithium_set_level(key, WC_ML_DSA_87);
         else
             ret = WC_KEY_SIZE_E;
     }
@@ -5072,12 +5076,12 @@ static int wc_Pkcs11CheckPrivKey_Dilithium(dilithium_key* privateKey,
      * stored in the key object */
     ret = wc_dilithium_get_level(privateKey, &key_level);
     if (ret == 0) {
-        if (key_level == 2)
-            storedKeySize = DILITHIUM_LEVEL2_PUB_KEY_SIZE;
-        else if (key_level == 3)
-            storedKeySize = DILITHIUM_LEVEL3_PUB_KEY_SIZE;
-        else if (key_level == 5)
-            storedKeySize = DILITHIUM_LEVEL5_PUB_KEY_SIZE;
+        if (key_level == WC_ML_DSA_44)
+            storedKeySize = ML_DSA_LEVEL2_PUB_KEY_SIZE;
+        else if (key_level == WC_ML_DSA_65)
+            storedKeySize = ML_DSA_LEVEL3_PUB_KEY_SIZE;
+        else if (key_level == WC_ML_DSA_87)
+            storedKeySize = ML_DSA_LEVEL5_PUB_KEY_SIZE;
         else
             ret = WC_KEY_SIZE_E;
     }

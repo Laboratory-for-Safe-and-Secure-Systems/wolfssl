@@ -5527,6 +5527,28 @@ int AddCA(WOLFSSL_CERT_MANAGER* cm, DerBuffer** pDer, int type, int verify)
                 break;
             #endif /* HAVE_FALCON */
             #if defined(HAVE_DILITHIUM)
+            case ML_DSA_LEVEL2k:
+                if (cm->minDilithiumKeySz < 0 ||
+                    ML_DSA_LEVEL2_KEY_SIZE < (word16)cm->minDilithiumKeySz) {
+                    ret = DILITHIUM_KEY_SIZE_E;
+                    WOLFSSL_MSG("\tCA Dilithium level 2 key size error");
+                }
+                break;
+            case ML_DSA_LEVEL3k:
+                if (cm->minDilithiumKeySz < 0 ||
+                    ML_DSA_LEVEL3_KEY_SIZE < (word16)cm->minDilithiumKeySz) {
+                    ret = DILITHIUM_KEY_SIZE_E;
+                    WOLFSSL_MSG("\tCA Dilithium level 3 key size error");
+                }
+                break;
+            case ML_DSA_LEVEL5k:
+                if (cm->minDilithiumKeySz < 0 ||
+                    ML_DSA_LEVEL5_KEY_SIZE < (word16)cm->minDilithiumKeySz) {
+                    ret = DILITHIUM_KEY_SIZE_E;
+                    WOLFSSL_MSG("\tCA Dilithium level 5 key size error");
+                }
+                break;
+            #if defined(WOLFSSL_DILITHIUM_FIPS204_DRAFT)
             case DILITHIUM_LEVEL2k:
                 if (cm->minDilithiumKeySz < 0 ||
                     DILITHIUM_LEVEL2_KEY_SIZE < (word16)cm->minDilithiumKeySz) {
@@ -5548,6 +5570,7 @@ int AddCA(WOLFSSL_CERT_MANAGER* cm, DerBuffer** pDer, int type, int verify)
                     WOLFSSL_MSG("\tCA Dilithium level 5 key size error");
                 }
                 break;
+            #endif
             #endif /* HAVE_DILITHIUM */
 
             default:
@@ -6222,9 +6245,15 @@ static int check_cert_key_dev(word32 keyOID, byte* privKey, word32 privSz,
     }
 #endif
 #if defined(HAVE_DILITHIUM)
-    if ((keyOID == DILITHIUM_LEVEL2k) ||
+    if (
+    #if defined(WOLFSSL_DILITHIUM_FIPS204_DRAFT)
+        (keyOID == DILITHIUM_LEVEL2k) ||
         (keyOID == DILITHIUM_LEVEL3k) ||
-        (keyOID == DILITHIUM_LEVEL5k)) {
+        (keyOID == DILITHIUM_LEVEL5k) ||
+    #endif
+        (keyOID == ML_DSA_LEVEL2k) ||
+        (keyOID == ML_DSA_LEVEL3k) ||
+        (keyOID == ML_DSA_LEVEL5k)) {
         type = DYNAMIC_TYPE_DILITHIUM;
     }
 #endif
@@ -6254,9 +6283,15 @@ static int check_cert_key_dev(word32 keyOID, byte* privKey, word32 privSz,
         }
         #endif
         #if defined(HAVE_DILITHIUM)
-        if ((keyOID == DILITHIUM_LEVEL2k) ||
+        if (
+        #if defined(WOLFSSL_DILITHIUM_FIPS204_DRAFT)
+            (keyOID == DILITHIUM_LEVEL2k) ||
             (keyOID == DILITHIUM_LEVEL3k) ||
-            (keyOID == DILITHIUM_LEVEL5k)) {
+            (keyOID == DILITHIUM_LEVEL5k) ||
+        #endif
+            (keyOID == ML_DSA_LEVEL2k) ||
+            (keyOID == ML_DSA_LEVEL3k) ||
+            (keyOID == ML_DSA_LEVEL5k)) {
             ret = wc_CryptoCb_PqcSignatureCheckPrivKey(pkey,
                                         WC_PQC_SIG_TYPE_DILITHIUM,
                                         pubKey, pubSz);
@@ -6293,9 +6328,15 @@ static int check_cert_key_dev(word32 keyOID, byte* privKey, word32 privSz,
         }
     #endif
     #if defined(HAVE_DILITHIUM)
-        if ((keyOID == DILITHIUM_LEVEL2k) ||
+        if (
+        #if defined(WOLFSSL_DILITHIUM_FIPS204_DRAFT)
+            (keyOID == DILITHIUM_LEVEL2k) ||
             (keyOID == DILITHIUM_LEVEL3k) ||
-            (keyOID == DILITHIUM_LEVEL5k)) {
+            (keyOID == DILITHIUM_LEVEL5k) ||
+        #endif
+            (keyOID == ML_DSA_LEVEL2k) ||
+            (keyOID == ML_DSA_LEVEL3k) ||
+            (keyOID == ML_DSA_LEVEL5k)) {
             wc_dilithium_free((dilithium_key*)pkey);
         }
     #endif
@@ -7120,34 +7161,78 @@ static int d2iTryDilithiumKey(WOLFSSL_EVP_PKEY** out, const unsigned char* mem,
 
     /* Test if Dilithium key. Try all levels. */
     if (priv) {
-        isDilithium = ((wc_dilithium_set_level(dilithium, 2) == 0) &&
+        isDilithium = ((wc_dilithium_set_level(dilithium, WC_ML_DSA_44) == 0) &&
                        (wc_dilithium_import_private(mem,
                           (word32)memSz, dilithium) == 0));
         if (!isDilithium) {
-            isDilithium = ((wc_dilithium_set_level(dilithium, 3) == 0) &&
-                           (wc_dilithium_import_private(mem,
-                              (word32)memSz, dilithium) == 0));
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_65) == 0) &&
+                 (wc_dilithium_import_private(mem, (word32)memSz,
+                                              dilithium) == 0));
         }
         if (!isDilithium) {
-            isDilithium = ((wc_dilithium_set_level(dilithium, 5) == 0) &&
-                           (wc_dilithium_import_private(mem,
-                              (word32)memSz, dilithium) == 0));
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_87) == 0) &&
+                 (wc_dilithium_import_private(mem, (word32)memSz,
+                                              dilithium) == 0));
         }
+    #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+        if (!isDilithium) {
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_44_DRAFT) == 0) &&
+                 (wc_dilithium_import_private(mem, (word32)memSz,
+                                              dilithium) == 0));
+        }
+        if (!isDilithium) {
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_65_DRAFT) == 0) &&
+                 (wc_dilithium_import_private(mem, (word32)memSz,
+                                              dilithium) == 0));
+        }
+        if (!isDilithium) {
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_87_DRAFT) == 0) &&
+                 (wc_dilithium_import_private(mem, (word32)memSz,
+                                              dilithium) == 0));
+        }
+    #endif
     }
     else {
-        isDilithium = ((wc_dilithium_set_level(dilithium, 2) == 0) &&
+        isDilithium = ((wc_dilithium_set_level(dilithium, WC_ML_DSA_44) == 0) &&
                        (wc_dilithium_import_public(mem, (word32)memSz,
                           dilithium) == 0));
         if (!isDilithium) {
-            isDilithium = ((wc_dilithium_set_level(dilithium, 3) == 0) &&
-                           (wc_dilithium_import_public(mem, (word32)memSz,
-                              dilithium) == 0));
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_65) == 0) &&
+                 (wc_dilithium_import_public(mem, (word32)memSz,
+                                             dilithium) == 0));
         }
         if (!isDilithium) {
-            isDilithium = ((wc_dilithium_set_level(dilithium, 5) == 0) &&
-                           (wc_dilithium_import_public(mem, (word32)memSz,
-                              dilithium) == 0));
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_87) == 0) &&
+                 (wc_dilithium_import_public(mem, (word32)memSz,
+                                             dilithium) == 0));
         }
+    #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+        if (!isDilithium) {
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_44_DRAFT) == 0) &&
+                 (wc_dilithium_import_public(mem, (word32)memSz,
+                                             dilithium) == 0));
+        }
+        if (!isDilithium) {
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_65_DRAFT) == 0) &&
+                 (wc_dilithium_import_public(mem, (word32)memSz,
+                                             dilithium) == 0));
+        }
+        if (!isDilithium) {
+            isDilithium =
+                ((wc_dilithium_set_level(dilithium, WC_ML_DSA_87_DRAFT) == 0) &&
+                 (wc_dilithium_import_public(mem, (word32)memSz,
+                                             dilithium) == 0));
+        }
+    #endif
     }
     wc_dilithium_free(dilithium);
 #ifdef WOLFSSL_SMALL_STACK
@@ -11387,6 +11472,15 @@ int wolfSSL_set_compression(WOLFSSL* ssl)
             break;
         case dilithium_level5_sa_algo:
             *sigAlgo = DILITHIUM_LEVEL5k;
+            break;
+        case ml_dsa_44_sa_algo:
+            *sigAlgo = ML_DSA_LEVEL2k;
+            break;
+        case ml_dsa_65_sa_algo:
+            *sigAlgo = ML_DSA_LEVEL3k;
+            break;
+        case ml_dsa_87_sa_algo:
+            *sigAlgo = ML_DSA_LEVEL5k;
             break;
         case sm2_sa_algo:
             *sigAlgo = SM2k;
@@ -17688,12 +17782,20 @@ const WOLFSSL_ObjectInfo wolfssl_object_info[] = {
                                                           "Falcon Level 5"},
     #endif /* HAVE_FALCON */
     #ifdef HAVE_DILITHIUM
+        { CTC_ML_DSA_LEVEL2, ML_DSA_LEVEL2k,  oidKeyType,
+          "ML-DSA 44", "ML-DSA 44"},
+        { CTC_ML_DSA_LEVEL3, ML_DSA_LEVEL3k,  oidKeyType,
+          "ML-DSA 65", "ML-DSA 65"},
+        { CTC_ML_DSA_LEVEL5, ML_DSA_LEVEL5k,  oidKeyType,
+          "ML-DSA 87", "ML-DSA 87"},
+        #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
         { CTC_DILITHIUM_LEVEL2, DILITHIUM_LEVEL2k,  oidKeyType,
           "Dilithium Level 2", "Dilithium Level 2"},
         { CTC_DILITHIUM_LEVEL3, DILITHIUM_LEVEL3k,  oidKeyType,
           "Dilithium Level 3", "Dilithium Level 3"},
         { CTC_DILITHIUM_LEVEL5, DILITHIUM_LEVEL5k,  oidKeyType,
           "Dilithium Level 5", "Dilithium Level 5"},
+        #endif
     #endif /* HAVE_DILITHIUM */
 
         /* oidCurveType */
@@ -18083,6 +18185,15 @@ static int SaToNid(byte sa, int* nid)
             break;
         case dilithium_level5_sa_algo:
             *nid = CTC_DILITHIUM_LEVEL5;
+            break;
+        case ml_dsa_44_sa_algo:
+            *nid = CTC_ML_DSA_LEVEL2;
+            break;
+        case ml_dsa_65_sa_algo:
+            *nid = CTC_ML_DSA_LEVEL3;
+            break;
+        case ml_dsa_87_sa_algo:
+            *nid = CTC_ML_DSA_LEVEL5;
             break;
         case sm2_sa_algo:
             *nid = WC_NID_sm2;

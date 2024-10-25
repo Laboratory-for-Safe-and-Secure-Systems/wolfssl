@@ -10918,9 +10918,15 @@ WOLF_STACK_OF(WOLFSSL_X509)* wolfSSL_X509_chain_up_ref(
         }
     #endif
     #if defined(HAVE_DILITHIUM)
-        if ((x509->pubKeyOID == DILITHIUM_LEVEL2k) ||
+        if (
+        #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+            (x509->pubKeyOID == DILITHIUM_LEVEL2k) ||
             (x509->pubKeyOID == DILITHIUM_LEVEL3k) ||
-            (x509->pubKeyOID == DILITHIUM_LEVEL5k)) {
+            (x509->pubKeyOID == DILITHIUM_LEVEL5k) ||
+        #endif
+            (x509->pubKeyOID == ML_DSA_LEVEL2k) ||
+            (x509->pubKeyOID == ML_DSA_LEVEL3k) ||
+            (x509->pubKeyOID == ML_DSA_LEVEL5k)) {
             dilithium = (dilithium_key*)XMALLOC(sizeof(dilithium_key), NULL,
                                           DYNAMIC_TYPE_DILITHIUM);
             if (dilithium == NULL) {
@@ -10936,18 +10942,32 @@ WOLF_STACK_OF(WOLFSSL_X509)* wolfSSL_X509_chain_up_ref(
                 return ret;
             }
 
-            if (x509->pubKeyOID == DILITHIUM_LEVEL2k) {
+            if (x509->pubKeyOID == ML_DSA_LEVEL2k) {
+                type = ML_DSA_LEVEL2_TYPE;
+                wc_dilithium_set_level(dilithium, WC_ML_DSA_44);
+            }
+            else if (x509->pubKeyOID == ML_DSA_LEVEL3k) {
+                type = ML_DSA_LEVEL3_TYPE;
+                wc_dilithium_set_level(dilithium, WC_ML_DSA_65);
+            }
+            else if (x509->pubKeyOID == ML_DSA_LEVEL5k) {
+                type = ML_DSA_LEVEL5_TYPE;
+                wc_dilithium_set_level(dilithium, WC_ML_DSA_87);
+            }
+        #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+            else if (x509->pubKeyOID == DILITHIUM_LEVEL2k) {
                 type = DILITHIUM_LEVEL2_TYPE;
-                wc_dilithium_set_level(dilithium, 2);
+                wc_dilithium_set_level(dilithium, WC_ML_DSA_44_DRAFT);
             }
             else if (x509->pubKeyOID == DILITHIUM_LEVEL3k) {
                 type = DILITHIUM_LEVEL3_TYPE;
-                wc_dilithium_set_level(dilithium, 3);
+                wc_dilithium_set_level(dilithium, WC_ML_DSA_65_DRAFT);
             }
             else if (x509->pubKeyOID == DILITHIUM_LEVEL5k) {
                 type = DILITHIUM_LEVEL5_TYPE;
-                wc_dilithium_set_level(dilithium, 5);
+                wc_dilithium_set_level(dilithium, WC_ML_DSA_87_DRAFT);
             }
+        #endif
 
             ret = wc_Dilithium_PublicKeyDecode(x509->pubKey.buffer, &idx,
                                     dilithium, x509->pubKey.length);
@@ -11128,9 +11148,15 @@ cleanup:
         }
     #endif
     #if defined(HAVE_DILITHIUM)
-        if ((x509->pubKeyOID == DILITHIUM_LEVEL2k) ||
+        if (
+        #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+            (x509->pubKeyOID == DILITHIUM_LEVEL2k) ||
             (x509->pubKeyOID == DILITHIUM_LEVEL3k) ||
-            (x509->pubKeyOID == DILITHIUM_LEVEL5k)) {
+            (x509->pubKeyOID == DILITHIUM_LEVEL5k) ||
+        #endif
+            (x509->pubKeyOID == ML_DSA_LEVEL2k) ||
+            (x509->pubKeyOID == ML_DSA_LEVEL3k) ||
+            (x509->pubKeyOID == ML_DSA_LEVEL5k)) {
             wc_dilithium_free(dilithium);
             XFREE(dilithium, NULL, DYNAMIC_TYPE_DILITHIUM);
         }
