@@ -10487,15 +10487,65 @@ static int TLSX_KeyShare_IsSupported(int namedGroup)
 
 
 static const word16 preferredGroup[] = {
-#if defined(HAVE_ECC) && (!defined(NO_ECC256) || \
-    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_ECC_SECP256R1,
-#if !defined(HAVE_FIPS) && defined(WOLFSSL_SM2)
-    WOLFSSL_ECC_SM2P256V1,
+#if !defined(WOLFSSL_NO_ML_KEM) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_WC_ML_KEM_1024)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_ECC) && (!defined(NO_ECC521) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 521
+    WOLFSSL_P521_ML_KEM_1024,
 #endif
+    WOLFSSL_ML_KEM_1024,
+#endif
+#if defined(WOLFSSL_KYBER_ORIGINAL) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_KYBER1024)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_ECC) && (!defined(NO_ECC521) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 521
+    WOLFSSL_P521_KYBER_LEVEL5,
+#endif
+    WOLFSSL_KYBER_LEVEL5,
+#endif
+#if defined(HAVE_ECC) && (!defined(NO_ECC521) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 521
+    WOLFSSL_ECC_SECP521R1,
+#endif
+#if !defined(WOLFSSL_NO_ML_KEM) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_WC_ML_KEM_1024)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_ECC) && (!defined(NO_ECC384) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 384
+    WOLFSSL_P384_ML_KEM_1024,
+#endif
+#endif
+#if !defined(WOLFSSL_NO_ML_KEM) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_WC_ML_KEM_768)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
+    WOLFSSL_X448_ML_KEM_768,
+#endif
+#if defined(HAVE_ECC) && (!defined(NO_ECC384) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 384
+    WOLFSSL_P384_ML_KEM_768,
 #endif
 #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_ECC_X25519,
+    WOLFSSL_X25519_ML_KEM_768,
+#endif
+    WOLFSSL_ML_KEM_768,
+#endif
+#if defined(WOLFSSL_KYBER_ORIGINAL) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_KYBER768)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
+    WOLFSSL_X448_KYBER_LEVEL3,
+#endif
+#if defined(HAVE_ECC) && (!defined(NO_ECC384) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 384
+    WOLFSSL_P384_KYBER_LEVEL3,
+#endif
+#if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_X25519_KYBER_LEVEL3,
+#endif
+    WOLFSSL_KYBER_LEVEL3,
 #endif
 #if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
     WOLFSSL_ECC_X448,
@@ -10504,9 +10554,55 @@ static const word16 preferredGroup[] = {
     defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 384
     WOLFSSL_ECC_SECP384R1,
 #endif
-#if defined(HAVE_ECC) && (!defined(NO_ECC521) || \
-    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 521
-    WOLFSSL_ECC_SECP521R1,
+#if !defined(WOLFSSL_NO_ML_KEM) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_WC_ML_KEM_768)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_ECC) && (!defined(NO_ECC256) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_P256_ML_KEM_768,
+#endif
+#endif
+#if defined(WOLFSSL_KYBER_ORIGINAL) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_KYBER768)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_ECC) && (!defined(NO_ECC256) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_P256_KYBER_LEVEL3,
+#endif
+#endif
+#if !defined(WOLFSSL_NO_ML_KEM) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_WC_ML_KEM_512)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_X25519_ML_KEM_512,
+#endif
+#if defined(HAVE_ECC) && (!defined(NO_ECC256) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_P256_ML_KEM_512,
+#endif
+    WOLFSSL_ML_KEM_512,
+#endif
+#if defined(WOLFSSL_KYBER_ORIGINAL) && \
+    ((defined(WOLFSSL_WC_KYBER) && defined(WOLFSSL_KYBER512)) || \
+     defined(HAVE_LIBOQS))
+#if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_X25519_KYBER_LEVEL1,
+#endif
+#if defined(HAVE_ECC) && (!defined(NO_ECC256) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_P256_KYBER_LEVEL1,
+#endif
+    WOLFSSL_KYBER_LEVEL1,
+#endif
+#if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_ECC_X25519,
+#endif
+#if defined(HAVE_ECC) && (!defined(NO_ECC256) || \
+    defined(HAVE_ALL_CURVES)) && !defined(NO_ECC_SECP) && ECC_MIN_KEY_SZ <= 256
+    WOLFSSL_ECC_SECP256R1,
+#if !defined(HAVE_FIPS) && defined(WOLFSSL_SM2)
+    WOLFSSL_ECC_SM2P256V1,
+#endif
 #endif
 #if defined(HAVE_FFDHE_2048)
     WOLFSSL_FFDHE_2048,
@@ -10523,92 +10619,6 @@ static const word16 preferredGroup[] = {
 #if defined(HAVE_FFDHE_8192)
     WOLFSSL_FFDHE_8192,
 #endif
-#ifndef WOLFSSL_NO_ML_KEM
-#ifdef WOLFSSL_WC_KYBER
-    #ifdef WOLFSSL_WC_ML_KEM_512
-    WOLFSSL_ML_KEM_512,
-    WOLFSSL_P256_ML_KEM_512,
-    #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_X25519_ML_KEM_512,
-    #endif
-    #endif
-    #ifdef WOLFSSL_WC_ML_KEM_768
-    WOLFSSL_ML_KEM_768,
-    WOLFSSL_P384_ML_KEM_768,
-    WOLFSSL_P256_ML_KEM_768,
-    #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_X25519_ML_KEM_768,
-    #endif
-    #if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
-    WOLFSSL_X448_ML_KEM_768,
-    #endif
-    #endif
-    #ifdef WOLFSSL_WC_ML_KEM_1024
-    WOLFSSL_ML_KEM_1024,
-    WOLFSSL_P521_ML_KEM_1024,
-    WOLFSSL_P384_ML_KEM_1024,
-    #endif
-#elif defined(HAVE_LIBOQS)
-    /* These require a runtime call to TLSX_KeyShare_IsSupported to use */
-    WOLFSSL_ML_KEM_512,
-    WOLFSSL_ML_KEM_768,
-    WOLFSSL_ML_KEM_1024,
-    WOLFSSL_P256_ML_KEM_512,
-    WOLFSSL_P384_ML_KEM_768,
-    WOLFSSL_P256_ML_KEM_768,
-    WOLFSSL_P521_ML_KEM_1024,
-    WOLFSSL_P384_ML_KEM_1024,
-    #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_X25519_ML_KEM_512,
-    WOLFSSL_X25519_ML_KEM_768,
-    #endif
-    #if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
-    WOLFSSL_X448_ML_KEM_768,
-    #endif
-#endif
-#endif /* !WOLFSSL_NO_ML_KEM */
-#ifdef WOLFSSL_KYBER_ORIGINAL
-#ifdef WOLFSSL_WC_KYBER
-    #ifdef WOLFSSL_KYBER512
-    WOLFSSL_KYBER_LEVEL1,
-    WOLFSSL_P256_KYBER_LEVEL1,
-    #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_X25519_KYBER_LEVEL1,
-    #endif
-    #endif
-    #ifdef WOLFSSL_KYBER768
-    WOLFSSL_KYBER_LEVEL3,
-    WOLFSSL_P384_KYBER_LEVEL3,
-    WOLFSSL_P256_KYBER_LEVEL3,
-    #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_X25519_KYBER_LEVEL3,
-    #endif
-    #if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
-    WOLFSSL_X448_KYBER_LEVEL3,
-    #endif
-    #endif
-    #ifdef WOLFSSL_KYBER1024
-    WOLFSSL_KYBER_LEVEL5,
-    WOLFSSL_P521_KYBER_LEVEL5,
-    #endif
-#elif defined(HAVE_LIBOQS)
-    /* These require a runtime call to TLSX_KeyShare_IsSupported to use */
-    WOLFSSL_KYBER_LEVEL1,
-    WOLFSSL_KYBER_LEVEL3,
-    WOLFSSL_KYBER_LEVEL5,
-    WOLFSSL_P256_KYBER_LEVEL1,
-    WOLFSSL_P384_KYBER_LEVEL3,
-    WOLFSSL_P256_KYBER_LEVEL3,
-    WOLFSSL_P521_KYBER_LEVEL5,
-    #if defined(HAVE_CURVE25519) && ECC_MIN_KEY_SZ <= 256
-    WOLFSSL_X25519_KYBER_LEVEL1,
-    WOLFSSL_X25519_KYBER_LEVEL3,
-    #endif
-    #if defined(HAVE_CURVE448) && ECC_MIN_KEY_SZ <= 448
-    WOLFSSL_X448_KYBER_LEVEL3,
-    #endif
-#endif
-#endif /* WOLFSSL_KYBER_ORIGINAL */
     WOLFSSL_NAMED_GROUP_INVALID
 };
 
