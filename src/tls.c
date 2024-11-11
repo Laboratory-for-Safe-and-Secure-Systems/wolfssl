@@ -7918,7 +7918,7 @@ static int TLSX_KeyShare_GenEccKey(WOLFSSL *ssl, KeyShareEntry* kse)
 
         #ifdef WOLFSSL_STATIC_EPHEMERAL
             ret = wolfSSL_StaticEphemeralKeyLoad(ssl, WC_PK_TYPE_ECDH, kse->key);
-            if (ret != 0)
+            if (ret != 0 || eccKey->dp->id != curveId)
         #endif
             {
                 /* set curve info for EccMakeKey "peer" info */
@@ -10582,8 +10582,7 @@ static int TLSX_KeyShare_GroupRank(const WOLFSSL* ssl, int group)
     byte numGroups;
 
     if (ssl->numGroups == 0) {
-        groups = preferredGroup;
-        numGroups = PREFERRED_GROUP_SZ;
+        return 0;
     }
     else {
         groups = ssl->group;
