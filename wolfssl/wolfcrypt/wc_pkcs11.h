@@ -31,7 +31,17 @@
 #endif
 
 #include <wolfssl/wolfcrypt/cryptocb.h>
-#include <wolfssl/wolfcrypt/pkcs11.h>
+#include <wolfssl/wolfcrypt/wc_pkcs11_setup.h>
+
+#ifndef HAVE_PKCS11_STATIC
+
+#if defined(_WIN32)
+    #include <libloaderapi.h>
+    #define LIBTYPE HINSTANCE
+#else
+    #define LIBTYPE void*
+#endif /* _WIN32 */
+#endif /* HAVE_PKCS11_STATIC */
 
 #ifdef __cplusplus
     extern "C" {
@@ -40,7 +50,7 @@
 
 typedef struct Pkcs11Dev {
 #ifndef HAVE_PKCS11_STATIC
-    void*             dlHandle;         /* Handle to library  */
+    LIBTYPE           dlHandle;         /* Handle to library  */
 #endif
     CK_FUNCTION_LIST* func;             /* Array of functions */
     void*             heap;
