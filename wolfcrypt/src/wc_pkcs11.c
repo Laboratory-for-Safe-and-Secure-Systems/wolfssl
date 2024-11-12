@@ -23,10 +23,6 @@
 
 #ifdef HAVE_PKCS11
 
-#ifndef HAVE_PKCS11_STATIC
-#include <dlfcn.h>
-#endif
-
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
 #include <wolfssl/wolfcrypt/asn.h>
 #ifndef NO_RSA
@@ -38,6 +34,22 @@
     #define WOLFSSL_MISC_INCLUDED
     #include <wolfcrypt/src/misc.c>
 #endif
+
+#ifndef HAVE_PKCS11_STATIC
+#if defined(_WIN32)
+    #include <Windows.h>
+
+    #define OPENLIB(libname) LoadLibrary((libname))
+    #define LIBFUNC(lib, fn) GetProcAddress((lib), (fn))
+    #define CLOSELIB(lib)    FreeLibrary((lib))
+#else
+    #include <dlfcn.h>
+
+    #define OPENLIB(libname) dlopen((libname), RTLD_NOW | RTLD_LOCAL)
+    #define LIBFUNC(lib, fn) dlsym((lib), (fn))
+    #define CLOSELIB(lib)    dlclose((lib))
+#endif /* _WIN32 */
+#endif /* HAVE_PKCS11_STATIC */
 
 #ifndef WOLFSSL_HAVE_ECC_KEY_GET_PRIV
     /* FIPS build has replaced ecc.h. */
@@ -683,9 +695,13 @@ int wc_Pkcs11_Initialize_v3(Pkcs11Dev* dev, const char* library,
         }
 #else
         /* Load dynamic library */
-        dev->dlHandle = dlopen(library, RTLD_NOW | RTLD_LOCAL);
+        dev->dlHandle = OPENLIB(library);
         if (dev->dlHandle == NULL) {
+    #if defined(_WIN32)
+            WOLFSSL_MSG_EX("LoadLibrary() error: %d", GetLastError());
+    #else
             WOLFSSL_MSG(dlerror());
+    #endif
             ret = BAD_PATH_ERROR;
         }
 
@@ -693,7 +709,7 @@ int wc_Pkcs11_Initialize_v3(Pkcs11Dev* dev, const char* library,
             /* Check if the library supports PKCS#11 version 3.0 (or above) by
              * looking for the C_GetInterface method (only present for >= V3.0).
              */
-            func = dlsym(dev->dlHandle, "C_GetInterface");
+            func = LIBFUNC(dev->dlHandle, "C_GetInterface");
             if (func != NULL) {
                 /* Function is present, use it */
                 CK_INTERFACE_PTR interface = NULL;
@@ -763,7 +779,7 @@ int wc_Pkcs11_Initialize_v3(Pkcs11Dev* dev, const char* library,
             else {
                 /* Function not present, try a 2.x library by looking for
                 * C_GetFunctionList. */
-                func = dlsym(dev->dlHandle, "C_GetFunctionList");
+                func = LIBFUNC(dev->dlHandle, "C_GetFunctionList");
                 if (func == NULL) {
             #if defined(_WIN32)
                     WOLFSSL_MSG_EX("GetProcAddress(): %d", GetLastError());
@@ -846,7 +862,7 @@ void wc_Pkcs11_Finalize(Pkcs11Dev* dev)
             dev->func = NULL;
         }
 #if !defined(HAVE_PKCS11_STATIC) && !defined(HAVE_PKCS11_V3_STATIC)
-        dlclose(dev->dlHandle);
+        CLOSELIB(dev->dlHandle);
         dev->dlHandle = NULL;
 #endif
     }
