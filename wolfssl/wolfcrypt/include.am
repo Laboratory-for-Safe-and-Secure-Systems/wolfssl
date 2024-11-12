@@ -160,7 +160,10 @@ endif
 
 if BUILD_PKCS11
 nobase_include_HEADERS+= wolfssl/wolfcrypt/wc_pkcs11.h
-nobase_include_HEADERS+= wolfssl/wolfcrypt/pkcs11.h
+nobase_include_HEADERS+= wolfssl/wolfcrypt/wc_pkcs11_setup.h
+nobase_include_HEADERS+= wolfssl/wolfcrypt/pkcs11/pkcs11.h
+nobase_include_HEADERS+= wolfssl/wolfcrypt/pkcs11/pkcs11f.h
+nobase_include_HEADERS+= wolfssl/wolfcrypt/pkcs11/pkcs11t.h
 endif
 
 if BUILD_CAVIUM
