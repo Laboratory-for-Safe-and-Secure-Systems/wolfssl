@@ -2683,7 +2683,10 @@ endif()
 if(NOT BUILD_PKCS11)
     list(APPEND HEADER_EXCLUDE
       "wolfssl/wolfcrypt/wc_pkcs11.h"
-      "wolfssl/wolfcrypt/pkcs11.h"
+      "wolfssl/wolfcrypt/wc_pkcs11_setup.h"
+      "wolfssl/wolfcrypt/pkcs11/pkcs11.h"
+      "wolfssl/wolfcrypt/pkcs11/pkcs11f.h"
+      "wolfssl/wolfcrypt/pkcs11/pkcs11t.h"
       )
 endif()
 
