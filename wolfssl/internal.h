@@ -1837,7 +1837,18 @@ enum Misc {
     SM2_SA_MAJOR        = 7,   /* Most significant byte for SM2 with SM3 */
     SM2_SA_MINOR        = 8,   /* Least significant byte for SM2 with SM3 */
 
-    PQC_SA_MAJOR        = 0xFE,/* Most significant byte used with PQC sig algs */
+    /* Taken from: https://github.com/bwesterb/tls-mldsa */
+    PQC_SA_MAJOR        = 9,   /* Most significant byte used with PQC sig algs */
+    ML_DSA_44_SA_MAJOR   = 9,   /* Most significant byte for ML-DSA 44 */
+    ML_DSA_44_SA_MINOR   = 4,   /* Least significant byte for ML-DSA 44 */
+    ML_DSA_65_SA_MAJOR   = 9,   /* Most significant byte for ML-DSA 65 */
+    ML_DSA_65_SA_MINOR   = 5,   /* Least significant byte for ML-DSA 65 */
+    ML_DSA_87_SA_MAJOR   = 9,   /* Most significant byte for ML-DSA 87 */
+    ML_DSA_87_SA_MINOR   = 6,   /* Least significant byte for ML-DSA 87 */
+
+    /* Taken from:
+     * https://github.com/open-quantum-safe/oqs-provider/blob/main/ALGORITHMS.md */
+    PQC_DEV_SA_MAJOR    = 0xFE,/* Most significant byte used with PQC sig algs */
 
     /* These values for falcon and dilithium match what OQS has defined. */
     FALCON_LEVEL1_SA_MAJOR = 0xFE,
@@ -4314,7 +4325,10 @@ enum SignatureAlgorithm {
     dilithium_level2_sa_algo     = 14,
     dilithium_level3_sa_algo     = 15,
     dilithium_level5_sa_algo     = 16,
-    sm2_sa_algo                  = 17,
+    ml_dsa_44_sa_algo            = 17,
+    ml_dsa_65_sa_algo            = 18,
+    ml_dsa_87_sa_algo            = 19,
+    sm2_sa_algo                  = 20,
     invalid_sa_algo              = 255
 };
 
