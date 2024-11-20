@@ -681,6 +681,16 @@ else()
     endif()
 endif()
 
+# LMS
+add_option(WOLFSSL_LMS
+    "Enable the wolfSSL LMS implementation (default: disabled)"
+    "no" "yes;no")
+
+# XMSS
+add_option(WOLFSSL_XMSS
+    "Enable the wolfSSL XMSS implementation (default: disabled)"
+    "no" "yes;no")
+
 # TODO: - Lean PSK
 #       - Lean TLS
 #       - Low resource
@@ -694,8 +704,6 @@ endif()
 #       - Atomic user record layer
 #       - Public key callbacks
 #       - Microchip/Atmel CryptoAuthLib
-#       - XMSS
-#       - LMS
 #       - dual-certs
 
 # AES-CBC
