@@ -2275,6 +2275,8 @@ end:
             configTICK_RATE_HZ);
     }
 #else
+    #include <sys/time.h>
+
     /* The time in milliseconds.
      * Used for tickets to represent difference between when first seen and when
      * sending.

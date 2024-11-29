@@ -35,7 +35,7 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
-#ifndef HAVE_PKCS11_STATIC
+#if !defined(HAVE_PKCS11_STATIC) && !defined(HAVE_PKCS11_STATIC_V3)
 #if defined(_WIN32)
     #include <Windows.h>
 
@@ -49,7 +49,7 @@
     #define LIBFUNC(lib, fn) dlsym((lib), (fn))
     #define CLOSELIB(lib)    dlclose((lib))
 #endif /* _WIN32 */
-#endif /* HAVE_PKCS11_STATIC */
+#endif /* HAVE_PKCS11_STATIC || HAVE_PKCS11_STATIC_V3 */
 
 #ifndef WOLFSSL_HAVE_ECC_KEY_GET_PRIV
     /* FIPS build has replaced ecc.h. */
@@ -549,11 +549,14 @@ int wc_Pkcs11_Initialize(Pkcs11Dev* dev, const char* library, void* heap)
 /**
  * Load library, get function list and initialize PKCS#11.
  *
- * @param  [in]   dev      Device object.
- * @param  [in]   library  Library name including path.
- * @param  [in]   heap     Heap hint.
- * @param  [out]  rvp      PKCS#11 return value. Last return value seen.
- *                         May be NULL.
+ * @param  [in]     dev           Device object.
+ * @param  [in]     library       Library name including path.
+ * @param  [in]     heap          Heap hint.
+ * @param  [in,out] version       On in, desired version of interface.
+ *                                On out, actual obtained version of interface.
+ * @param  [in]     interfaceName Name of the interface to use.
+ * @param  [out]    rvp           PKCS#11 return value. Last return value seen.
+ *                              May be NULL.
  * @return  BAD_FUNC_ARG when dev or library are NULL pointers.
  * @return  BAD_PATH_ERROR when dynamic library cannot be opened.
  * @return  WC_INIT_E when the initialization PKCS#11 fails.
@@ -561,7 +564,7 @@ int wc_Pkcs11_Initialize(Pkcs11Dev* dev, const char* library, void* heap)
  * @return  0 on success.
  */
 int wc_Pkcs11_Initialize_ex(Pkcs11Dev* dev, const char* library, void* heap,
-                            CK_RV* rvp)
+                            int* version, const char* interfaceName, CK_RV* rvp)
 {
     return wc_Pkcs11_Initialize_v3(dev, library, heap, NULL, NULL, rvp);
 }

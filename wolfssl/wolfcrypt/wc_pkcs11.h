@@ -33,15 +33,14 @@
 #include <wolfssl/wolfcrypt/cryptocb.h>
 #include <wolfssl/wolfcrypt/wc_pkcs11_setup.h>
 
-#ifndef HAVE_PKCS11_STATIC
-
+#if !defined(HAVE_PKCS11_STATIC) && !defined(HAVE_PKCS11_STATIC_V3)
 #if defined(_WIN32)
     #include <libloaderapi.h>
     #define LIBTYPE HINSTANCE
 #else
     #define LIBTYPE void*
 #endif /* _WIN32 */
-#endif /* HAVE_PKCS11_STATIC */
+#endif /* HAVE_PKCS11_STATIC || HAVE_PKCS11_STATIC_V3 */
 
 #ifdef __cplusplus
     extern "C" {
