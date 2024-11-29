@@ -39,7 +39,7 @@ extern "C" {
 
 #if defined (_WIN32)
     #define PKCS11_CALLSPEC __cdecl
-    #if defined(HAVE_PKCS11_STATIC)
+    #if defined(HAVE_PKCS11_STATIC) || defined(HAVE_PKCS11_STATIC_V3)
         #define PKCS11_DLLIMPORT
     #elif defined(_MSC_VER)
         #define PKCS11_DLLIMPORT __declspec(dllimport)
