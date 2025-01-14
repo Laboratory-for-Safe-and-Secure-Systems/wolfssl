@@ -2166,6 +2166,11 @@ struct DecodedCert {
     WC_BITFIELD extSapkiCrit:1;
     WC_BITFIELD extAltSigAlgCrit:1;
     WC_BITFIELD extAltSigValCrit:1;
+
+    /* Pointer to the raw DER encoded public key within the certificate
+     * for easier preTBS generation */
+    const byte* rawPublicKey;
+    word32  rawPubKeySize;
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
 };
 
