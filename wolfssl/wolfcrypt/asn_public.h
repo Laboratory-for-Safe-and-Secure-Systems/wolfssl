@@ -533,6 +533,10 @@ typedef struct Cert {
     /* Alternative Signature Value */
     byte *altSigValDer;
     int altSigValLen;
+    /* Store optional reference to public key buffer to prevent need for
+     * key decoding during preTBS generation. */
+    const byte *pubKeyDer;
+    int pubKeyLen;
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
 #ifdef WOLFSSL_CERT_REQ
     char     challengePw[CTC_NAME_SIZE];
