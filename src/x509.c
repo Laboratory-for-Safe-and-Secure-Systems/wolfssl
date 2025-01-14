@@ -8083,50 +8083,6 @@ int wolfSSL_i2d_X509(WOLFSSL_X509* x509, unsigned char** out)
     return derSz;
 }
 
-#ifdef WOLFSSL_DUAL_ALG_CERTS
-int wc_GeneratePreTBS(DecodedCert* cert, byte *der, int derSz) {
-    int ret = 0;
-    WOLFSSL_X509 *x = NULL;
-    byte certIsCSR = 0;
-
-    if ((cert == NULL) || (der == NULL) || (derSz <= 0)) {
-        return BAD_FUNC_ARG;
-    }
-
-#ifdef WOLFSSL_CERT_REQ
-    certIsCSR = cert->isCSR;
-#endif
-
-    x = wolfSSL_X509_new();
-    if (x == NULL) {
-        ret = MEMORY_E;
-    }
-    else {
-        ret = CopyDecodedToX509(x, cert);
-    }
-
-    if (ret == 0) {
-        /* Remove the altsigval extension. */
-        XFREE(x->altSigValDer, x->heap, DYNAMIC_TYPE_X509_EXT);
-        x->altSigValDer = NULL;
-        x->altSigValLen = 0;
-        /* Remove sigOID so it won't be encoded. */
-        x->sigOID = 0;
-        /* We now have a PreTBS. Encode it. */
-        ret = wolfssl_x509_make_der(x, certIsCSR, der, &derSz, 0);
-        if (ret == WOLFSSL_SUCCESS) {
-            ret = derSz;
-        }
-    }
-
-    if (x != NULL) {
-        wolfSSL_X509_free(x);
-    }
-
-    return ret;
-}
-#endif /* WOLFSSL_DUAL_ALG_CERTS */
-
 #ifndef NO_BIO
 /**
  * Converts the DER from bio and creates a WOLFSSL_X509 structure from it.
