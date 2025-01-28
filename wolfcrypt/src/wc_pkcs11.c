@@ -2309,6 +2309,176 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
     return ret;
 }
 
+#ifndef NO_CERTS
+/**
+ * Store the certificate on the token in the session.
+ *
+ * @param  [in]  token       Token to store certificate on.
+ * @param  [in]  type        Certificate type.
+ * @param  [in]  cert        Already decoded certificate.
+ * @return  NOT_COMPILED_IN when mechanism not available.
+ * @return  0 on success.
+ */
+int wc_Pkcs11StoreCert(Pkcs11Token* token, int type, void* cert,
+                       const char* label)
+{
+    return wc_Pkcs11StoreCert_ex(token, type, cert, label, 0);
+}
+
+/**
+ * Store the certificate on the token in the session or persistent.
+ *
+ * @param  [in]  token       Token to store certificate on.
+ * @param  [in]  type        Certificate type.
+ * @param  [in]  key         Key type specific object.
+ * @param  [in]  persistent  Store the cert persistently (CKA_TOKEN is true).
+ * @return  NOT_COMPILED_IN when mechanism not available.
+ * @return  0 on success.
+ */
+int wc_Pkcs11StoreCert_ex(Pkcs11Token* token, int type, void* cert,
+                          const char* label, int persistent)
+{
+    int                     ret = 0;
+    Pkcs11Session           session;
+    DecodedCert*            certDec = (DecodedCert*)cert;
+    CK_OBJECT_HANDLE        certHandle = NULL_PTR;
+    CK_RV                   rv;
+    CK_CERTIFICATE_TYPE     certType;
+    CK_BBOOL                trustedCert;
+    CK_CERTIFICATE_CATEGORY certCategory;
+    CK_MECHANISM_TYPE       hashAlg;
+    int                     labelLen = 0;
+
+    /* Empty entries for optional:
+     *   * CKA_HASH_OF_SUBJECT_PUBLIC_KEY
+     *   * CKA_HASH_OF_ISSUER_PUBLIC_KEY
+     *   * CKA_NAME_HASH_ALGORITHM
+     *   * CKA_LABEL
+     *   * CKA_TOKEN (persistent flag).
+     * */
+    CK_ATTRIBUTE    certTemplate[] = {
+        { CKA_CLASS,                 &certClass,    sizeof(certClass)    },
+        { CKA_CERTIFICATE_TYPE,      &certType,     sizeof(certType)     },
+        { CKA_TRUSTED,               &trustedCert,  sizeof(trustedCert)  },
+        { CKA_CERTIFICATE_CATEGORY,  &certCategory, sizeof(certCategory) },
+        { CKA_SUBJECT,               NULL,          0                    },
+        { CKA_ISSUER,                NULL,          0                    },
+        { CKA_SERIAL_NUMBER,         NULL,          0                    },
+        { CKA_VALUE,                 NULL,          0                    },
+        { 0,                         NULL,          0                    },
+        { 0,                         NULL,          0                    },
+        { 0,                         NULL,          0                    },
+        { 0,                         NULL,          0                    },
+        { 0,                         NULL,          0                    }
+    };
+    /* Mandatory entries + 5 optional. */
+    CK_ULONG certTmplCnt = sizeof(certTemplate) / sizeof(*certTemplate) - 5;
+
+    if (label == NULL)
+        return BAD_FUNC_ARG;
+
+    labelLen = XSTRLEN(label);
+
+    if (labelLen > 0) {
+        certTemplate[certTmplCnt].type       = CKA_LABEL;
+        certTemplate[certTmplCnt].pValue     = (void*)label;
+        certTemplate[certTmplCnt].ulValueLen = labelLen;
+        certTmplCnt++;
+    }
+
+    if (persistent) {
+        certTemplate[certTmplCnt].type       = CKA_TOKEN;
+        certTemplate[certTmplCnt].pValue     = &ckTrue;
+        certTemplate[certTmplCnt].ulValueLen = sizeof(ckTrue);
+        certTmplCnt++;
+    }
+
+    switch (type) {
+        case PKCS11_CERT_TYPE_ENTITY:
+            certType = CKC_X_509;
+            trustedCert = CK_FALSE;
+            certCategory = CK_CERTIFICATE_CATEGORY_TOKEN_USER;
+            break;
+        case PKCS11_CERT_TYPE_INTERMEDIATE:
+            certType = CKC_X_509;
+            trustedCert = CK_FALSE;
+            certCategory = CK_CERTIFICATE_CATEGORY_AUTHORITY;
+            break;
+        case PKCS11_CERT_TYPE_ROOT:
+            certType = CKC_X_509;
+            trustedCert = CK_TRUE;
+            certCategory = CK_CERTIFICATE_CATEGORY_AUTHORITY;
+            break;
+        default:
+            ret = NOT_COMPILED_IN;
+            break;
+    }
+    if (ret == 0) {
+        /* Set remaining attributes */
+
+        /* CKA_SUBJECT */
+        certTemplate[4].pValue = (void*)certDec->subjectRaw;
+        certTemplate[4].ulValueLen = certDec->subjectRawLen;
+
+        /* CKA_ISSUER */
+        certTemplate[5].pValue = (void*)certDec->issuerRaw;
+        certTemplate[5].ulValueLen = certDec->issuerRawLen;
+
+        /* CKA_SERIAL_NUMBER */
+        certTemplate[6].pValue = (void*)certDec->serial;
+        certTemplate[6].ulValueLen = certDec->serialSz;
+
+        /* CKA_VALUE */
+        certTemplate[7].pValue = (void*)certDec->source;
+        certTemplate[7].ulValueLen = certDec->maxIdx;
+
+        /* CKA_HASH_OF_SUBJECT_PUBLIC_KEY */
+        if (certDec->extSubjKeyIdSet) {
+            certTemplate[certTmplCnt].type = CKA_HASH_OF_SUBJECT_PUBLIC_KEY;
+            certTemplate[certTmplCnt].pValue = (void*)certDec->extSubjKeyId;
+            certTemplate[certTmplCnt].ulValueLen = certDec->extSubjKeyIdSz;
+            certTmplCnt++;
+        }
+
+        /* CKA_HASH_OF_ISSUER_PUBLIC_KEY */
+        if (certDec->extAuthKeyIdSet) {
+            certTemplate[certTmplCnt].type = CKA_HASH_OF_ISSUER_PUBLIC_KEY;
+            certTemplate[certTmplCnt].pValue = (void*)certDec->extAuthKeyId;
+            certTemplate[certTmplCnt].ulValueLen = certDec->extAuthKeyIdSz;
+            certTmplCnt++;
+        }
+
+        /* CKA_NAME_HASH_ALGORITHM */
+        if (certDec->extSubjKeyIdSet || certDec->extAuthKeyIdSet) {
+#if defined(NO_SHA) || (!defined(NO_SHA256) && defined(WC_ASN_HASH_SHA256))
+            hashAlg = CKM_SHA256;
+#else
+            hashAlg = CKM_SHA_1;
+#endif
+            certTemplate[certTmplCnt].type = CKA_NAME_HASH_ALGORITHM;
+            certTemplate[certTmplCnt].pValue = &hashAlg;
+            certTemplate[certTmplCnt].ulValueLen = sizeof(hashAlg);
+        }
+    }
+    if (ret == 0) {
+        ret = Pkcs11OpenSession(token, &session, 1);
+    }
+    if (ret == 0) {
+        PKCS11_DUMP_TEMPLATE("Certificate", certTemplate, certTmplCnt);
+        rv = session.func->C_CreateObject(session.handle, certTemplate,
+                                           certTmplCnt, &certHandle);
+        PKCS11_RV("C_CreateObject", rv);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+        }
+    }
+
+    Pkcs11CloseSession(token, &session);
+
+    return ret;
+}
+#endif /* !NO_CERTS */
+
 #if !defined(NO_RSA) || defined(HAVE_ECC) || (!defined(NO_AES) && \
            (defined(HAVE_AESGCM) || defined(HAVE_AES_CBC))) || \
            !defined(NO_HMAC) || !defined(NO_CERTS)
@@ -5982,35 +6152,54 @@ static int Pkcs11RandomSeed(Pkcs11Session* session, wc_CryptoInfo* info)
 
 #ifndef NO_CERTS
 
-static int Pkcs11GetCert(Pkcs11Session* session, wc_CryptoInfo* info) {
-    int                 ret = 0;
-    CK_RV               rv  = 0;
-    CK_ULONG            count = 0;
-    CK_OBJECT_HANDLE    certHandle = CK_INVALID_HANDLE;
-    byte               *certData = NULL;
-    CK_ATTRIBUTE    certTemplate[2] = {
-        { CKA_CLASS,           &certClass, sizeof(certClass)   }
+static int Pkcs11GetCert(Pkcs11Session* session, wc_CryptoInfo* info)
+{
+    int                     ret = 0;
+    CK_RV                   rv  = 0;
+    CK_ULONG                count = 0;
+    CK_OBJECT_HANDLE        certHandle = CK_INVALID_HANDLE;
+    CK_CERTIFICATE_TYPE     certType = CKC_X_509;
+    CK_BBOOL                trustedCert = CK_FALSE;
+    CK_CERTIFICATE_CATEGORY certCategory;
+    byte                    *certData = NULL;
+
+    /* Empty entry for certificate ID / label */
+    CK_ATTRIBUTE    certTemplate[5] = {
+        { CKA_CLASS,                &certClass, sizeof(certClass)       },
+        { CKA_CERTIFICATE_TYPE,     &certType,     sizeof(certType)     },
+        { CKA_TRUSTED,              &trustedCert,  sizeof(trustedCert)  },
+        { CKA_CERTIFICATE_CATEGORY, &certCategory, sizeof(certCategory) },
+        { 0,                        NULL,          0                    },
     };
     CK_ATTRIBUTE   tmpl[] = {
         { CKA_VALUE,         NULL_PTR, 0 }
     };
-    CK_ULONG        certTmplCnt = sizeof(certTemplate) / sizeof(*certTemplate);
+    CK_ULONG        certTmplCnt = sizeof(certTemplate) / sizeof(*certTemplate) - 1;
     CK_ULONG        tmplCnt = sizeof(tmpl) / sizeof(*tmpl);
 
     WOLFSSL_MSG("PKCS#11: Retrieve certificate");
     if (info->cert.labelLen > 0) {
-        certTemplate[1].type = CKA_LABEL;
-        certTemplate[1].pValue = (CK_VOID_PTR)info->cert.label;
-        certTemplate[1].ulValueLen = info->cert.labelLen;
+        certTemplate[certTmplCnt].type = CKA_LABEL;
+        certTemplate[certTmplCnt].pValue = (CK_VOID_PTR)info->cert.label;
+        certTemplate[certTmplCnt].ulValueLen = info->cert.labelLen;
+        certTmplCnt += 1;
     }
     else if (info->cert.idLen > 0) {
-        certTemplate[1].type = CKA_ID;
-        certTemplate[1].pValue = (CK_VOID_PTR)info->cert.id;
-        certTemplate[1].ulValueLen = info->cert.idLen;
+        certTemplate[certTmplCnt].type = CKA_ID;
+        certTemplate[certTmplCnt].pValue = (CK_VOID_PTR)info->cert.id;
+        certTemplate[certTmplCnt].ulValueLen = info->cert.idLen;
+        certTmplCnt += 1;
     }
     else {
         ret = BAD_FUNC_ARG;
         goto exit;
+    }
+
+    if (info->cert.certType == CERT_TYPE) {
+        certCategory = CK_CERTIFICATE_CATEGORY_TOKEN_USER;
+    }
+    else if (info->cert.certType == CHAIN_CERT_TYPE) {
+        certCategory = CK_CERTIFICATE_CATEGORY_AUTHORITY;
     }
 
     ret = Pkcs11FindKeyByTemplate(

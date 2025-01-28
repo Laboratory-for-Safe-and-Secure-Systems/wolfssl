@@ -91,6 +91,13 @@ enum Pkcs11KeyType {
     PKCS11_KEY_TYPE_FALCON,
 };
 
+/* Types if certificates that can be stored. */
+enum Pkcs11CertType {
+    PKCS11_CERT_TYPE_ENTITY,
+    PKCS11_CERT_TYPE_INTERMEDIATE,
+    PKCS11_CERT_TYPE_ROOT,
+};
+
 WOLFSSL_API int wc_Pkcs11_Initialize(Pkcs11Dev* dev, const char* library,
                                      void* heap);
 WOLFSSL_API int wc_Pkcs11_Initialize_ex(Pkcs11Dev* dev, const char* library,
@@ -117,6 +124,13 @@ WOLFSSL_API int wc_Pkcs11StoreKey(Pkcs11Token* token, int type, int clear,
     void* key);
 WOLFSSL_API int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear,
     void* key, int persistent);
+
+#ifndef NO_CERTS
+WOLFSSL_API int wc_Pkcs11StoreCert(Pkcs11Token* token, int type, void* cert,
+    const char* label);
+WOLFSSL_API int wc_Pkcs11StoreCert_ex(Pkcs11Token* token, int type,
+    void* cert, const char* label, int persistent);
+#endif
 
 WOLFSSL_API int wc_Pkcs11_CryptoDevCb(int devId, wc_CryptoInfo* info,
     void* ctx);
