@@ -88,6 +88,9 @@
  *    Default behavior is to return a signed 64-bit value.
  */
 
+#define RFC8773 true
+#define RFC8773_MUTUALAUTH false
+
 #ifdef HAVE_CONFIG_H
     #include <config.h>
 #endif
@@ -3988,9 +3991,15 @@ static int SetupPskKey(WOLFSSL* ssl, PreSharedKey* psk, int clientHello)
             return PSK_KEY_ERROR;
         }
 
-        if (!clientHello) {
+        if (!clientHello) 
+        {
+            
+#if (RFC8773)
             /* CLIENT: using PSK for peer authentication. */
+            ssl->options.peerAuthGood = 0;          // Changed '0' '1' to test RFC8773 functionality.
+#else 
             ssl->options.peerAuthGood = 1;
+#endif
         }
     }
 #endif
@@ -5944,8 +5953,13 @@ static int FindPsk(WOLFSSL* ssl, PreSharedKey* psk, const byte* suite, int* err)
     if (ret == 0 && found) {
         /* Default to ciphersuite if cb doesn't specify. */
         ssl->options.resuming = 0;
+
+# if ((RFC8773) && (RFC8773_MUTUALAUTH))
         /* Don't send certificate request when using PSK. */
+        ssl->options.verifyPeer = 1;    // Changed '0' '1' to test RFC8773 functionality with mutual authentication.
+#else
         ssl->options.verifyPeer = 0;
+#endif
 
         /* PSK age is always zero. */
         if (psk->ticketAge != 0) {
@@ -6123,8 +6137,11 @@ static int DoPreSharedKeys(WOLFSSL* ssl, const byte* input, word32 inputSz,
             continue;
         }
 
+#if (RFC8773)
+        ssl->options.sendVerify = SEND_CERT;    // Changed '0' to 'SEND_CERT' test RFC8773 functionality.
+#else
         ssl->options.sendVerify = 0;
-
+#endif
         /* Derive the Finished message secret. */
         ret = DeriveFinishedSecret(ssl, binderKey,
                                    ssl->keys.client_write_MAC_secret,
@@ -7089,7 +7106,9 @@ int DoTls13ClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         goto exit_dch;
 #endif
 #ifndef NO_CERTS
-    if (!args->usingPSK) {
+#if(!RFC8773)
+    if (!args->usingPSK) {            // Removed assert to test RFC8773 functionality.
+#endif
         if ((ret = MatchSuite(ssl, ssl->clSuites)) < 0) {
         #ifdef WOLFSSL_ASYNC_CRYPT
             if (ret != WC_NO_ERR_TRACE(WC_PENDING_E))
@@ -7097,13 +7116,17 @@ int DoTls13ClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                 WOLFSSL_MSG("Unsupported cipher suite, ClientHello 1.3");
             goto exit_dch;
         }
-    }
+#if(!RFC8773)
+    }                                 // Removed assert to test RFC8773 functionality.
+#endif
 #endif
 #ifdef HAVE_SUPPORTED_CURVES
     if (args->usingPSK == 2) {
         /* Pick key share and Generate a new key if not present. */
         int doHelloRetry = 0;
-        ret = TLSX_KeyShare_Establish(ssl, &doHelloRetry);
+#if(!RFC8773)
+        ret = TLSX_KeyShare_Establish(ssl, &doHelloRetry);    // Removed to test RFC8773 functionality (already established KeyShare in MatchSuite() function).
+#endif
         if (doHelloRetry) {
             /* Make sure we don't send HRR twice */
             if (ssl->options.serverState == SERVER_HELLO_RETRY_REQUEST_COMPLETE)
@@ -12306,11 +12329,13 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
         #endif
         #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
             /* Server's authenticating with PSK must not send this. */
+#if ((!RFC8773) && (!RFC8773_MUTUALAUTH))
             if (ssl->options.pskNegotiated) {
                 WOLFSSL_MSG("CertificateRequest received while using PSK");
                 WOLFSSL_ERROR_VERBOSE(SANITY_MSG_E);
                 return SANITY_MSG_E;
             }
+#endif
         #endif
             /* Check previously seen. */
         #ifndef WOLFSSL_POST_HANDSHAKE_AUTH
@@ -12347,7 +12372,7 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                 }
             #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
                 /* Server's authenticating with PSK must not send this. */
-                if (ssl->options.pskNegotiated) {
+                if ((ssl->options.pskNegotiated) && (ssl->options.peerAuthGood)) {
                     WOLFSSL_MSG("CertificateVerify received while using PSK");
                     WOLFSSL_ERROR_VERBOSE(SANITY_MSG_E);
                     return SANITY_MSG_E;
@@ -12401,6 +12426,7 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                 /* Must have seen certificate and verify from server except when
                  * using PSK. */
             #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
+#if (!RFC8773)                   // Removed SanityCheck to test RFC8773 functionality.
                 if (ssl->options.pskNegotiated) {
                     if (ssl->options.serverState !=
                                          SERVER_ENCRYPTED_EXTENSIONS_COMPLETE) {
@@ -12409,6 +12435,7 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                         return OUT_OF_ORDER_E;
                     }
                 }
+#endif                  // Removed SanityCheck to test RFC8773 functionality.
                 else
             #endif
                 if (ssl->options.serverState != SERVER_CERT_VERIFY_COMPLETE) {
@@ -12444,7 +12471,9 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
             }
         #endif
         #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
+#if ((!RFC8773) && (!RFC8773_MUTUALAUTH))
             if (!ssl->options.pskNegotiated)
+#endif
         #endif
             {
                 /* Must have received a Certificate message from client if
