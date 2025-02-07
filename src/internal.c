@@ -9032,6 +9032,10 @@ void FreeHandshakeResources(WOLFSSL* ssl)
         FreeKey(ssl, DYNAMIC_TYPE_FALCON, (void**)&ssl->peerFalconKey);
         ssl->peerFalconKeyPresent = 0;
 #endif /* HAVE_FALCON */
+#if defined(HAVE_DILITHIUM)
+        FreeKey(ssl, DYNAMIC_TYPE_DILITHIUM, (void**)&ssl->peerDilithiumKey);
+        ssl->peerDilithiumKeyPresent = 0;
+#endif /* HAVE_DILITHIUM */
     }
 
 #ifdef HAVE_ECC
