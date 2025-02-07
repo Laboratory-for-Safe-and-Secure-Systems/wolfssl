@@ -2734,6 +2734,13 @@ int InitSSL_Ctx(WOLFSSL_CTX* ctx, WOLFSSL_METHOD* method, void* heap)
 #if defined(WOLFSSL_TLS13) && !defined(HAVE_SUPPORTED_CURVES)
     ctx->noPskDheKe = 1;
 #endif
+#endif /* HAVE_SESSION_TICKET || !NO_PSK */
+
+#if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+    /* Per default, this extension is deactivated, but can
+     * be set using wolfSSL_CTX_set_cert_with_extern_psk().
+     */
+    ctx->certWithExternPSK = 0;
 #endif
 
 #if defined(WOLFSSL_QT) && !defined(NO_PSK)
@@ -7784,6 +7791,9 @@ int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
         ssl->options.postHandshakeAuth = ctx->postHandshakeAuth;
         ssl->options.verifyPostHandshake = ctx->verifyPostHandshake;
     #endif
+    #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+        ssl->options.certWithExternPsk = ctx->certWithExternPSK;
+    #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
 
     if (ctx->numGroups > 0) {
         XMEMCPY(ssl->group, ctx->group, sizeof(*ctx->group) * ctx->numGroups);
