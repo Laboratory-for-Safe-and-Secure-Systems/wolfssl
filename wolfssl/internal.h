@@ -3063,6 +3063,9 @@ typedef enum {
     TLSX_CERT_WITH_EXTERN_PSK       = TLSXT_CERT_WITH_EXTERN_PSK,
     #endif
     #endif
+    #if !defined(NO_PSK) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+    TLSX_CERT_WITH_EXTERN_PSK       = TLSXT_CERT_WITH_EXTERN_PSK,
+    #endif
     #if !defined(NO_CERTS) && !defined(WOLFSSL_NO_CA_NAMES)
     TLSX_CERTIFICATE_AUTHORITIES    = TLSXT_CERTIFICATE_AUTHORITIES,
     #endif
@@ -3816,6 +3819,11 @@ WOLFSSL_LOCAL int TLSX_PskKeyModes_Parse_Modes(const byte* input, word16 length,
 #ifdef WOLFSSL_EARLY_DATA
 WOLFSSL_LOCAL int TLSX_EarlyData_Use(WOLFSSL* ssl, word32 max, int is_response);
 #endif
+
+#if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && defined(WOLFSSL_TLS13)
+/* The Certifiate Authentication with PreSharedKey extension information. */
+WOLFSSL_LOCAL int TLSX_Cert_With_Extern_Psk_Use(WOLFSSL* ssl);
+#endif /* WOLFSSL_CERT_WITH_EXTERN_PSK && WOLFSSL_TLS13 */
 #endif /* HAVE_SESSION_TICKET || !NO_PSK */
 
 
@@ -5124,6 +5132,9 @@ struct Options {
 #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
     word16            certWithExternPsk:1; /* Cert auth with external PSK */
 #endif
+#endif
+#if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
+    word16            certWithExternPsk:1;/* Send Certs while using PSKs */
 #endif
     word16            partialWrite:1;     /* only one msg per write call */
     word16            quietShutdown:1;    /* don't send close notify */

@@ -8051,6 +8051,9 @@ int InitSSL(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
         ssl->options.postHandshakeAuth = ctx->postHandshakeAuth;
         ssl->options.verifyPostHandshake = ctx->verifyPostHandshake;
     #endif
+    #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+        ssl->options.certWithExternPsk = ctx->certWithExternPSK;
+    #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
 
     if (ctx->numGroups > 0) {
         XMEMCPY(ssl->group, ctx->group, sizeof(*ctx->group) * ctx->numGroups);

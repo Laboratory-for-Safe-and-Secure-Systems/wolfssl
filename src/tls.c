@@ -14883,6 +14883,11 @@ static int TLSX_GetSize(TLSX* list, byte* semaphore, byte msgType,
                 break;
         #endif
         #endif
+        #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+            case TLSX_CERT_WITH_EXTERN_PSK:
+                ret = PSK_WITH_CERT_GET_SIZE(msgType, &length);
+                break;
+        #endif
     #endif
             case TLSX_KEY_SHARE:
                 length += KS_GET_SIZE((KeyShareEntry*)extension->data, msgType);
@@ -15162,6 +15167,12 @@ static int TLSX_Write(TLSX* list, byte* output, byte* semaphore,
                 offset += cbShim;
                 break;
         #endif
+        #endif
+        #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+            case TLSX_CERT_WITH_EXTERN_PSK:
+                WOLFSSL_MSG("Certificate authentication with exernal PSK to write");
+                ret = PSK_WITH_CERT_WRITE(output + offset, msgType, &offset);
+                break;
         #endif
     #endif
             case TLSX_KEY_SHARE:
@@ -16657,6 +16668,9 @@ int TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType, word16* pLength)
                     TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
                 #endif
                 #endif
+                #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
+                    TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
+                #endif
                 }
             #if !defined(WOLFSSL_NO_TLS12) || !defined(NO_OLD_TLS)
                 else {
@@ -16715,6 +16729,9 @@ int TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType, word16* pLength)
         #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
             TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
         #endif
+        #endif
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
+            TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
         #endif
         #ifdef HAVE_CERTIFICATE_STATUS_REQUEST
             TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_STATUS_REQUEST));
@@ -16815,6 +16832,9 @@ int TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType, word16* pOffset
                     TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
             #endif
             #endif
+            #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
+                    TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
+            #endif
                 }
                 else
         #endif /* WOLFSSL_TLS13 */
@@ -16873,6 +16893,9 @@ int TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType, word16* pOffset
         #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
                 TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
         #endif
+        #endif
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
+                TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
         #endif
         #ifdef HAVE_CERTIFICATE_STATUS_REQUEST
                 TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_STATUS_REQUEST));
