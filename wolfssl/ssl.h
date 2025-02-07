@@ -3044,6 +3044,12 @@ enum { /* ssl Constants */
                                                         wc_psk_client_callback cb);
     WOLFSSL_API void wolfSSL_set_psk_client_callback(WOLFSSL* ssl,
                                                         wc_psk_client_callback cb);
+
+    #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+    WOLFSSL_API int wolfSSL_CTX_set_cert_with_extern_psk(WOLFSSL_CTX* ctx, int state);
+    WOLFSSL_API int wolfSSL_set_cert_with_extern_psk(WOLFSSL* ssl, int state);
+    #endif
+
     #ifdef OPENSSL_EXTRA
     typedef int (*wc_psk_use_session_cb_func)(WOLFSSL* ssl,
                             const WOLFSSL_EVP_MD* md, const unsigned char **id,
@@ -6010,6 +6016,8 @@ WOLFSSL_API const unsigned char* wolfSSL_dtls_cid_parse(const unsigned char* msg
  *      - QUIC (QTP)
  *  - https://datatracker.ietf.org/doc/html/rfc5077
  *      - Session Ticket (STK)
+ *  - https://datatracker.ietf.org/doc/html/rfc8773
+ *      - Certificate with External PSK (CWEP)
  * Example:
  *  For `WOLFSSL_CSR_MIN_SIZE_CLIENT = 5`, 5 was determined by looking at the
  * struct below defined in its respective RFC.
@@ -6065,6 +6073,12 @@ WOLFSSL_API const unsigned char* wolfSSL_dtls_cid_parse(const unsigned char* msg
 #endif
 #ifndef WOLFSSL_PKM_MIN_SIZE_SERVER
     #define WOLFSSL_PKM_MIN_SIZE_SERVER   0
+#endif
+#ifndef WOLFSSL_CWEP_MIN_SIZE_CLIENT
+    #define WOLFSSL_CWEP_MIN_SIZE_CLIENT  0
+#endif
+#ifndef WOLFSSL_CWEP_MIN_SIZE_SERVER
+    #define WOLFSSL_CWEP_MIN_SIZE_SERVER  0
 #endif
 #ifndef WOLFSSL_CSR2_MIN_SIZE_CLIENT
     #define WOLFSSL_CSR2_MIN_SIZE_CLIENT  7
