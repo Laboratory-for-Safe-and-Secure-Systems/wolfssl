@@ -5999,6 +5999,8 @@ WOLFSSL_API const unsigned char* wolfSSL_dtls_cid_parse(const unsigned char* msg
  *      - QUIC (QTP)
  *  - https://datatracker.ietf.org/doc/html/rfc5077
  *      - Session Ticket (STK)
+ *  - https://datatracker.ietf.org/doc/html/rfc8773
+ *      - Certificate with External PSK (CWEP)
  * Example:
  *  For `WOLFSSL_CSR_MIN_SIZE_CLIENT = 5`, 5 was determined by looking at the
  * struct below defined in its respective RFC.
@@ -6054,6 +6056,12 @@ WOLFSSL_API const unsigned char* wolfSSL_dtls_cid_parse(const unsigned char* msg
 #endif
 #ifndef WOLFSSL_PKM_MIN_SIZE_SERVER
     #define WOLFSSL_PKM_MIN_SIZE_SERVER   0
+#endif
+#ifndef WOLFSSL_CWEP_MIN_SIZE_CLIENT
+    #define WOLFSSL_CWEP_MIN_SIZE_CLIENT  1
+#endif
+#ifndef WOLFSSL_CWEP_MIN_SIZE_SERVER
+    #define WOLFSSL_CWEP_MIN_SIZE_SERVER  1
 #endif
 #ifndef WOLFSSL_CSR2_MIN_SIZE_CLIENT
     #define WOLFSSL_CSR2_MIN_SIZE_CLIENT  7
