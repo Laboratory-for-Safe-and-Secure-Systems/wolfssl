@@ -11558,7 +11558,6 @@ static int TLSX_Cert_With_Extern_Psk_GetSize(byte msgType, word16* pSz)
 {
     if((msgType == client_hello) || (msgType == server_hello))
     {
-        *pSz += OPAQUE16_LEN;
         return 0;
     }
 
@@ -11568,24 +11567,19 @@ static int TLSX_Cert_With_Extern_Psk_GetSize(byte msgType, word16* pSz)
 
 static int TLSX_Cert_With_Extern_Psk_Write(byte* output, byte msgType, word16* pSz)
 {
-     if ((msgType == client_hello) || (msgType == server_hello)) 
-     {
-        word16 idx = 0;
-        word16 len;
-        int ret;
-
-        /* Set Extension size as per RFC8773 to OPAQUE16_LEN*/
-        len = OPAQUE16_LEN;
-
-        *pSz += len;
+    if ((msgType == client_hello) || (msgType == server_hello)) 
+    {
+        /* We do not need to write anything into the extension, therefore 
+           we can simply return here. */
+        return 0;
     }
     else 
     {
+        /* Sanity check, in case the extension is written into any other 
+           handshake message. */
         WOLFSSL_ERROR_VERBOSE(SANITY_MSG_E);
         return SANITY_MSG_E;
     }
-
-    return 0;
 }
 
 static int TLSX_Cert_With_Extern_Psk_Parse(WOLFSSL* ssl)

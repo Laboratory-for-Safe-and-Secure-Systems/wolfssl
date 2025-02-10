@@ -6058,10 +6058,10 @@ WOLFSSL_API const unsigned char* wolfSSL_dtls_cid_parse(const unsigned char* msg
     #define WOLFSSL_PKM_MIN_SIZE_SERVER   0
 #endif
 #ifndef WOLFSSL_CWEP_MIN_SIZE_CLIENT
-    #define WOLFSSL_CWEP_MIN_SIZE_CLIENT  1
+    #define WOLFSSL_CWEP_MIN_SIZE_CLIENT  0
 #endif
 #ifndef WOLFSSL_CWEP_MIN_SIZE_SERVER
-    #define WOLFSSL_CWEP_MIN_SIZE_SERVER  1
+    #define WOLFSSL_CWEP_MIN_SIZE_SERVER  0
 #endif
 #ifndef WOLFSSL_CSR2_MIN_SIZE_CLIENT
     #define WOLFSSL_CSR2_MIN_SIZE_CLIENT  7
