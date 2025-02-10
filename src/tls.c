@@ -11552,12 +11552,13 @@ int TLSX_PreSharedKey_Use(TLSX** extensions, const byte* identity, word16 len,
 /* Certificate Authentication with Exernal Pre-Shared Key                     */
 /******************************************************************************/
 
-#if defined(WOLFSSL_TLS13) && (defined(HAVE_SESSION_TICKET) || !defined(NO_PSK))
+#if (defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK))
 
 static int TLSX_Cert_With_Extern_Psk_GetSize(byte msgType, word16* pSz)
 {
     if((msgType == client_hello) || (msgType == server_hello))
     {
+        /* as the extension does not contain any data, we can return zero here */
         return 0;
     }
 
@@ -11632,7 +11633,7 @@ int TLSX_Cert_With_Extern_Psk_Use(WOLFSSL* ssl)
 #define PSK_WITH_CERT_PARSE(a) 0
 
 
-#endif
+#endif /* WOLFSSL_TLS13 && WOLFSSL_CERT_WITH_EXTERN_PSK && !NO_PSK */
 
 
 /******************************************************************************/
@@ -13499,6 +13500,12 @@ void TLSX_FreeAll(TLSX* list, void* heap)
             case TLSX_PSK_KEY_EXCHANGE_MODES:
                 WOLFSSL_MSG("PSK Key Exchange Modes extension free");
                 break;
+
+        #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+            case TLSX_CERT_WITH_EXTERN_PSK:
+                WOLFSSL_MSG("Cert with extern PSK extension free");
+                break;
+        #endif
         #endif
     #endif
 
@@ -13698,7 +13705,7 @@ static int TLSX_GetSize(TLSX* list, byte* semaphore, byte msgType,
                 ret = PKM_GET_SIZE((byte)extension->val, msgType, &length);
                 break;
         #endif
-        #ifdef WOLFSSL_TLS13
+        #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK) 
             case TLSX_CERT_WITH_EXTERN_PSK:
                 ret = PSK_WITH_CERT_GET_SIZE(msgType, &length);
                 break;
@@ -14818,11 +14825,16 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
                 if (ret != 0)
                     return ret;
             }
+
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
         if((usingPSK) && IsAtLeastTLSv1_3(ssl->version))
         {
             ret = TLSX_Cert_With_Extern_Psk_Use(ssl);
+            if (ret != 0)
+                return ret;
         }
         #endif
+        #endif /* HAVE_SESSION_TICKET || !NO_PSK */
         #if defined(WOLFSSL_POST_HANDSHAKE_AUTH)
             if (!isServer && ssl->options.postHandshakeAuth) {
                 ret = TLSX_PostHandAuth_Use(ssl);
@@ -15374,6 +15386,8 @@ int TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType, word16* pLength)
                 #endif
                 #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
                     TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_PRE_SHARED_KEY));
+                #endif
+                #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
                     TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
                 #endif
                 }
@@ -15427,6 +15441,8 @@ int TLSX_GetResponseSize(WOLFSSL* ssl, byte msgType, word16* pLength)
         #endif
         #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
             TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_PRE_SHARED_KEY));
+        #endif
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
             TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
         #endif
         #ifdef HAVE_CERTIFICATE_STATUS_REQUEST
@@ -15524,6 +15540,8 @@ int TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType, word16* pOffset
             #endif
             #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
                     TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_PRE_SHARED_KEY));
+            #endif
+            #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
                     TURN_OFF(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
             #endif
                 }
@@ -15577,6 +15595,8 @@ int TLSX_WriteResponse(WOLFSSL *ssl, byte* output, byte msgType, word16* pOffset
         #endif
         #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
                 TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_PRE_SHARED_KEY));
+        #endif
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
                 TURN_ON(semaphore, TLSX_ToSemaphore(TLSX_CERT_WITH_EXTERN_PSK));
         #endif
         #ifdef HAVE_CERTIFICATE_STATUS_REQUEST
@@ -16324,6 +16344,7 @@ int TLSX_Parse(WOLFSSL* ssl, const byte* input, word16 length, byte msgType,
                 ret = PKM_PARSE(ssl, input + offset, size, msgType);
                 break;
             
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
             case TLSX_CERT_WITH_EXTERN_PSK:
                 WOLFSSL_MSG("Certificate with external PSK extension received");
             #ifdef WOLFSSL_DEBUG_TLS
@@ -16339,7 +16360,16 @@ int TLSX_Parse(WOLFSSL* ssl, const byte* input, word16 length, byte msgType,
                 }
 
                 ret = PSK_WITH_CERT_PARSE(ssl);
+                if (ret == 0)
+                {
+                    ssl->options.certWithExternPsk = 1;
+                }
+                else 
+                {
+                    ssl->options.certWithExternPsk = 0;
+                }
                 break;
+        #endif
     #endif
 
     #ifdef WOLFSSL_EARLY_DATA
