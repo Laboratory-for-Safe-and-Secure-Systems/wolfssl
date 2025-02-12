@@ -4231,11 +4231,11 @@ static word32 SetBitString16Bit(word16 val, byte* output)
     static const byte sigEd448Oid[] = {43, 101, 113};
 #endif /* HAVE_ED448 */
 #ifdef HAVE_FALCON
-    /* Falcon Level 1: 1 3 9999 3 6 */
-    static const byte sigFalcon_Level1Oid[] = {43, 206, 15, 3, 6};
+    /* Falcon Level 1: 1.3.9999.3.11 */
+    static const byte sigFalcon_Level1Oid[] = {43, 206, 15, 3, 11};
 
-    /* Falcon Level 5: 1 3 9999 3 9 */
-    static const byte sigFalcon_Level5Oid[] = {43, 206, 15, 3, 9};
+    /* Falcon Level 5: 1.3.9999.3.14 */
+    static const byte sigFalcon_Level5Oid[] = {43, 206, 15, 3, 14};
 #endif /* HAVE_FACON */
 #ifdef HAVE_DILITHIUM
 #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
@@ -4265,29 +4265,29 @@ static word32 SetBitString16Bit(word16 val, byte* output)
         {96, 134, 72, 1, 101, 3, 4, 3, 19};
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
-    /* Sphincs Fast Level 1: 1 3 9999 6 7 4 */
+    /* Sphincs Fast Level 1: 1.3.9999.6.7.13 */
     static const byte sigSphincsFast_Level1Oid[] =
-        {43, 206, 15, 6, 7, 4};
+        {43, 206, 15, 6, 7, 13};
 
-    /* Sphincs Fast Level 3: 1 3 9999 6 8 3 */
+    /* Sphincs Fast Level 3: 1.3.9999.6.8.10 */
     static const byte sigSphincsFast_Level3Oid[] =
-        {43, 206, 15, 6, 8, 3};
+        {43, 206, 15, 6, 8, 10};
 
-    /* Sphincs Fast Level 5: 1 3 9999 6 9 3 */
+    /* Sphincs Fast Level 5: 1.3.9999.6.9.10 */
     static const byte sigSphincsFast_Level5Oid[] =
-        {43, 206, 15, 6, 9, 3};
+        {43, 206, 15, 6, 9, 10};
 
-    /* Sphincs Small Level 1: 1 3 9999 6 7 10 */
+    /* Sphincs Small Level 1: 1.3.9999.6.7.16 */
     static const byte sigSphincsSmall_Level1Oid[] =
-        {43, 206, 15, 6, 7, 10};
+        {43, 206, 15, 6, 7, 16};
 
-    /* Sphincs Small Level 3: 1 3 9999 6 8 7 */
+    /* Sphincs Small Level 3: 1.3.9999.6.8.12 */
     static const byte sigSphincsSmall_Level3Oid[] =
-        {43, 206, 15, 6, 8, 7};
+        {43, 206, 15, 6, 8, 12};
 
-    /* Sphincs Small Level 5: 1 3 9999 6 9 7 */
+    /* Sphincs Small Level 5: 1.3.9999.6.9.12 */
     static const byte sigSphincsSmall_Level5Oid[] =
-        {43, 206, 15, 6, 9, 7};
+        {43, 206, 15, 6, 9, 12};
 #endif /* HAVE_SPHINCS */
 
 /* keyType */
@@ -4319,11 +4319,11 @@ static word32 SetBitString16Bit(word16 val, byte* output)
     static const byte keyDhOid[] = {42, 134, 72, 134, 247, 13, 1, 3, 1};
 #endif /* !NO_DH */
 #ifdef HAVE_FALCON
-    /* Falcon Level 1: 1 3 9999 3 6 */
-    static const byte keyFalcon_Level1Oid[] = {43, 206, 15, 3, 6};
+    /* Falcon Level 1: 1.3.9999.3.11 */
+    static const byte keyFalcon_Level1Oid[] = {43, 206, 15, 3, 11};
 
-    /* Falcon Level 5: 1 3 9999 3 9 */
-    static const byte keyFalcon_Level5Oid[] = {43, 206, 15, 3, 9};
+    /* Falcon Level 5: 1.3.9999.3.14 */
+    static const byte keyFalcon_Level5Oid[] = {43, 206, 15, 3, 14};
 #endif /* HAVE_FALCON */
 #ifdef HAVE_DILITHIUM
 #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
@@ -4353,29 +4353,29 @@ static word32 SetBitString16Bit(word16 val, byte* output)
         {96, 134, 72, 1, 101, 3, 4, 3, 19};
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
-    /* Sphincs Fast Level 1: 1 3 9999 6 7 4 */
+    /* Sphincs Fast Level 1: 1.3.9999.6.7.13 */
     static const byte keySphincsFast_Level1Oid[] =
-        {43, 206, 15, 6, 7, 4};
+        {43, 206, 15, 6, 7, 13};
 
-    /* Sphincs Fast Level 3: 1 3 9999 6 8 3 */
+    /* Sphincs Fast Level 3: 1.3.9999.6.8.10 */
     static const byte keySphincsFast_Level3Oid[] =
-        {43, 206, 15, 6, 8, 3};
+        {43, 206, 15, 6, 8, 10};
 
-    /* Sphincs Fast Level 5: 1 3 9999 6 9 3 */
+    /* Sphincs Fast Level 5: 1.3.9999.6.9.10 */
     static const byte keySphincsFast_Level5Oid[] =
-        {43, 206, 15, 6, 9, 3};
+        {43, 206, 15, 6, 9, 10};
 
-    /* Sphincs Small Level 1: 1 3 9999 6 7 10 */
+    /* Sphincs Small Level 1: 1.3.9999.6.7.16 */
     static const byte keySphincsSmall_Level1Oid[] =
-        {43, 206, 15, 6, 7, 10};
+        {43, 206, 15, 6, 7, 16};
 
-    /* Sphincs Small Level 3: 1 3 9999 6 8 7 */
+    /* Sphincs Small Level 3: 1.3.9999.6.8.12 */
     static const byte keySphincsSmall_Level3Oid[] =
-        {43, 206, 15, 6, 8, 7};
+        {43, 206, 15, 6, 8, 12};
 
-    /* Sphincs Small Level 5: 1 3 9999 6 9 7 */
+    /* Sphincs Small Level 5: 1.3.9999.6.9.12 */
     static const byte keySphincsSmall_Level5Oid[] =
-        {43, 206, 15, 6, 9, 7};
+        {43, 206, 15, 6, 9, 12};
 #endif /* HAVE_SPHINCS */
 
 /* curveType */
@@ -5967,17 +5967,17 @@ static int GetOID(const byte* input, word32* inOutIdx, word32* oid,
 
 #if defined(HAVE_SPHINCS)
     /* Since we are summing it up, there could be collisions...and indeed there
-     * are: SPHINCS_FAST_LEVEL1 and SPHINCS_FAST_LEVEL3.
+     * are: SPHINCS_FAST_LEVEL1 and SPHINCS_SMALL_LEVEL3.
      *
-     * We will look for the special case of SPHINCS_FAST_LEVEL3 and set *oid to
-     * 283 instead of 281; 282 is taken.
+     * We will look for the special case of SPHINCS_SMALL_LEVEL3 and set *oid to
+     * 292 instead of 290; 291 is taken.
      *
      * These hacks will hopefully disappear when new standardized OIDs appear.
      */
-    if (idx + (word32)sizeof(sigSphincsFast_Level3Oid) < (word32)length &&
-            XMEMCMP(&input[idx], sigSphincsFast_Level3Oid,
-               sizeof(sigSphincsFast_Level3Oid)) == 0) {
-        found_collision = SPHINCS_FAST_LEVEL3k;
+    if (idx + (word32)sizeof(sigSphincsSmall_Level3Oid) < (word32)length &&
+            XMEMCMP(&input[idx], sigSphincsSmall_Level3Oid,
+               sizeof(sigSphincsSmall_Level3Oid)) == 0) {
+        found_collision = SPHINCS_SMALL_LEVEL3k;
     }
 #endif /* HAVE_SPHINCS */
 
