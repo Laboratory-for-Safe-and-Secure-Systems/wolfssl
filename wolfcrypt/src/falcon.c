@@ -45,6 +45,64 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
+/* Generate a new falcon key pair. The level must already be set.
+ */
+int wc_falcon_make_key(falcon_key* key, WC_RNG* rng)
+{
+    int ret = 0;
+    OQS_SIG *oqssig = NULL;
+
+    if ((key == NULL) || (rng == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+
+#ifdef WOLF_CRYPTO_CB
+    if (ret == 0) {
+    #ifndef WOLF_CRYPTO_CB_FIND
+        if (key->devId != INVALID_DEVID)
+    #endif
+        {
+            ret = wc_CryptoCb_MakePqcSignatureKey(rng,
+                WC_PQC_SIG_TYPE_FALCON, key->level, key);
+            if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+                return ret;
+            /* fall-through when unavailable */
+            ret = 0;
+        }
+    }
+#endif
+
+    if (key->level == 1) {
+        oqssig = OQS_SIG_new(OQS_SIG_alg_falcon_512);
+    }
+    else if (key->level == 5) {
+        oqssig = OQS_SIG_new(OQS_SIG_alg_falcon_1024);
+    }
+    else {
+        ret = SIG_TYPE_E;
+    }
+
+    if (ret == 0) {
+        ret = wolfSSL_liboqsRngMutexLock(rng);
+        if (ret == 0) {
+            if (OQS_SIG_keypair(oqssig, key->p, key->k) != OQS_SUCCESS) {
+                ret = BUFFER_E;
+            }
+        }
+        wolfSSL_liboqsRngMutexUnlock();
+    }
+    if (ret == 0) {
+        key->prvKeySet = 1;
+        key->pubKeySet = 1;
+    }
+
+    if (oqssig != NULL) {
+        OQS_SIG_free(oqssig);
+    }
+
+    return ret;
+}
+
 /* Sign the message using the falcon private key.
  *
  *  in          [in]      Message to sign.
