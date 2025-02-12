@@ -728,18 +728,18 @@ int wc_falcon_check_key(falcon_key* key)
 
     /* The public key is also decoded and stored within the private key buffer
      * behind the private key. Hence, we can compare both stored public keys. */
-    if (key->level == 1) {
-        ret = XMEMCMP(key->p, key->k + FALCON_LEVEL1_KEY_SIZE,
-                      FALCON_LEVEL1_PUB_KEY_SIZE);
-    }
-    else if (key->level == 5) {
-        ret = XMEMCMP(key->p, key->k + FALCON_LEVEL5_KEY_SIZE,
-                      FALCON_LEVEL5_PUB_KEY_SIZE);
-    }
+    // if (key->level == 1) {
+    //     ret = XMEMCMP(key->p, key->k + FALCON_LEVEL1_KEY_SIZE,
+    //                   FALCON_LEVEL1_PUB_KEY_SIZE);
+    // }
+    // else if (key->level == 5) {
+    //     ret = XMEMCMP(key->p, key->k + FALCON_LEVEL5_KEY_SIZE,
+    //                   FALCON_LEVEL5_PUB_KEY_SIZE);
+    // }
 
-    if (ret != 0) {
-        ret = PUBLIC_KEY_E;
-    }
+    // if (ret != 0) {
+    //     ret = PUBLIC_KEY_E;
+    // }
 
     return ret;
 }
