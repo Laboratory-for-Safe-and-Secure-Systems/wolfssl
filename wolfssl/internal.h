@@ -24,8 +24,6 @@
 #ifndef WOLFSSL_INT_H
 #define WOLFSSL_INT_H
 
-#define WOLFSSL_CERT_WITH_EXTERN_PSK
-
 #include <wolfssl/wolfcrypt/types.h>
 #include <wolfssl/ssl.h>
 #ifdef HAVE_CRL
