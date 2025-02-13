@@ -2734,6 +2734,10 @@ int InitSSL_Ctx(WOLFSSL_CTX* ctx, WOLFSSL_METHOD* method, void* heap)
 #if defined(WOLFSSL_TLS13) && !defined(HAVE_SUPPORTED_CURVES)
     ctx->noPskDheKe = 1;
 #endif
+#endif /* HAVE_SESSION_TICKET || !NO_PSK */
+
+#if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+    ctx->certWithExternPSK = 1;
 #endif
 
 #if defined(WOLFSSL_QT) && !defined(NO_PSK)
