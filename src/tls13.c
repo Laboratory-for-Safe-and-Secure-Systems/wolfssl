@@ -5958,12 +5958,12 @@ static int FindPsk(WOLFSSL* ssl, PreSharedKey* psk, const byte* suite, int* err)
         /* Default to ciphersuite if cb doesn't specify. */
         ssl->options.resuming = 0;
 
-        if(ssl->options.mutualAuth) {
-            /* Don't send certificate request when using PSK. */
-            ssl->options.verifyPeer = 1;    // Changed '0' '1' to test RFC8773 functionality with mutual authentication.
-        } else {
+        /* We only need to overwrite this flag if no certificats are sent */
+        if(!ssl->options.certWithExternPsk)
+        {
             ssl->options.verifyPeer = 0;
         }
+        
 
         /* PSK age is always zero. */
         if (psk->ticketAge != 0) {
