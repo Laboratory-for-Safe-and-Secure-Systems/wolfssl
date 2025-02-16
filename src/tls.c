@@ -11552,12 +11552,11 @@ int TLSX_PreSharedKey_Use(TLSX** extensions, const byte* identity, word16 len,
 /* Certificate Authentication with Exernal Pre-Shared Key                     */
 /******************************************************************************/
 
-#if (defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK))
+#if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
 
 static int TLSX_Cert_With_Extern_Psk_GetSize(byte msgType, word16* pSz)
 {
-    if((msgType == client_hello) || (msgType == server_hello))
-    {
+    if((msgType == client_hello) || (msgType == server_hello)) {
         /* as the extension does not contain any data, we can return zero here */
         return 0;
     }
@@ -11566,16 +11565,14 @@ static int TLSX_Cert_With_Extern_Psk_GetSize(byte msgType, word16* pSz)
     return SANITY_MSG_E;
 }
 
-static int TLSX_Cert_With_Extern_Psk_Write(byte* output, byte msgType, word16* pSz)
+static int TLSX_Cert_With_Extern_Psk_Write(byte* output, byte msgType, word16* pSz) 
 {
-    if ((msgType == client_hello) || (msgType == server_hello)) 
-    {
+    if ((msgType == client_hello) || (msgType == server_hello)) {
         /* We do not need to write anything into the extension, therefore 
            we can simply return here. */
         return 0;
     }
-    else 
-    {
+    else {
         /* Sanity check, in case the extension is written into any other 
            handshake message. */
         WOLFSSL_ERROR_VERBOSE(SANITY_MSG_E);
@@ -11583,20 +11580,23 @@ static int TLSX_Cert_With_Extern_Psk_Write(byte* output, byte msgType, word16* p
     }
 }
 
-static int TLSX_Cert_With_Extern_Psk_Parse(WOLFSSL* ssl)
+static int TLSX_Cert_With_Extern_Psk_Parse(WOLFSSL* ssl) 
 {
     int ret;
 
     ret = TLSX_Cert_With_Extern_Psk_Use(ssl);
 
     if (ret != 0) {
+        ssl->options.certWithExternPsk = 0;
         WOLFSSL_ERROR_VERBOSE(ret);
     }
+    
+    ssl->options.certWithExternPsk = 1;
 
     return ret;
 }
 
-int TLSX_Cert_With_Extern_Psk_Use(WOLFSSL* ssl)
+int TLSX_Cert_With_Extern_Psk_Use(WOLFSSL* ssl) 
 {
 
     int ret = 0;
@@ -11604,15 +11604,16 @@ int TLSX_Cert_With_Extern_Psk_Use(WOLFSSL* ssl)
 
     /* Find the PSK key exchange modes extension if it exists. */
     extension = TLSX_Find(ssl->extensions, TLSX_CERT_WITH_EXTERN_PSK);
-    if (extension == NULL)
-    {
+    if (extension == NULL) {
         /* Push new PSK key exchange modes extension. */
         ret = TLSX_Push(&ssl->extensions, TLSX_CERT_WITH_EXTERN_PSK, NULL, ssl->heap);
-        if (ret != 0) return ret;
-
+        if (ret != 0)
+            return ret;
+        
         extension = TLSX_Find(ssl->extensions, TLSX_CERT_WITH_EXTERN_PSK);
-        if (extension == NULL) return MEMORY_E;
-    
+        if (extension == NULL)
+            return MEMORY_E;
+
         /* Set extension to be in response. */
         extension->resp = 1;
     }
@@ -13942,7 +13943,7 @@ static int TLSX_Write(TLSX* list, byte* output, byte* semaphore,
                                                                        &offset);
                 break;
         #endif
-        #ifdef WOLFSSL_TLS13
+        #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
             case TLSX_CERT_WITH_EXTERN_PSK:
                 WOLFSSL_MSG("Certificate authentication with exernal PSK to write");
                 ret = PSK_WITH_CERT_WRITE(output + offset, msgType, &offset);
@@ -14827,13 +14828,12 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
             }
 
         #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
-        if((usingPSK) && IsAtLeastTLSv1_3(ssl->version))
-        {
+        if((usingPSK) && (ssl->options.certWithExternPsk)) {
             ret = TLSX_Cert_With_Extern_Psk_Use(ssl);
             if (ret != 0)
                 return ret;
         }
-        #endif
+        #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK && !NO_PSK */
         #endif /* HAVE_SESSION_TICKET || !NO_PSK */
         #if defined(WOLFSSL_POST_HANDSHAKE_AUTH)
             if (!isServer && ssl->options.postHandshakeAuth) {
@@ -16360,14 +16360,6 @@ int TLSX_Parse(WOLFSSL* ssl, const byte* input, word16 length, byte msgType,
                 }
 
                 ret = PSK_WITH_CERT_PARSE(ssl);
-                if (ret == 0)
-                {
-                    ssl->options.certWithExternPsk = 1;
-                }
-                else 
-                {
-                    ssl->options.certWithExternPsk = 0;
-                }
                 break;
         #endif
     #endif

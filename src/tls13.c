@@ -88,7 +88,6 @@
  *    Default behavior is to return a signed 64-bit value.
  */
 
-
 #ifdef HAVE_CONFIG_H
     #include <config.h>
 #endif
@@ -3989,12 +3988,10 @@ static int SetupPskKey(WOLFSSL* ssl, PreSharedKey* psk, int clientHello)
             return PSK_KEY_ERROR;
         }
 
-        if (!clientHello) 
-        {
+        if (!clientHello) {
             
 #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
-            if(ssl->options.certWithExternPsk)
-            {
+            if(ssl->options.certWithExternPsk) {
                 /* if the extension is set, we do not assume the Authenticity through the PSK */
                 ssl->options.peerAuthGood = 0;
             }
@@ -5958,8 +5955,10 @@ static int FindPsk(WOLFSSL* ssl, PreSharedKey* psk, const byte* suite, int* err)
         /* Default to ciphersuite if cb doesn't specify. */
         ssl->options.resuming = 0;
 
+#ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
         /* We only need to overwrite this flag if no certificats are sent */
-        if(!ssl->options.certWithExternPsk)
+        if(!ssl->options.certWithExternPsk) 
+#endif
         {
             ssl->options.verifyPeer = 0;
         }
@@ -6366,6 +6365,7 @@ static int CheckPreSharedKeys(WOLFSSL* ssl, const byte* input, word32 helloSz,
 
             *usingPSK = 1;
         }
+    #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
         ext = TLSX_Find(ssl->extensions, TLSX_CERT_WITH_EXTERN_PSK);
         if(ext == NULL) {
             /* If no extension is found, we set the option to zero */
@@ -6378,7 +6378,7 @@ static int CheckPreSharedKeys(WOLFSSL* ssl, const byte* input, word32 helloSz,
             /* overwrite certificate send flag in ssl options */
             ssl->options.sendVerify = SEND_CERT;
         }
-
+    #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
     }
 #ifdef WOLFSSL_PSK_ID_PROTECTION
     else {
@@ -7120,7 +7120,12 @@ int DoTls13ClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         goto exit_dch;
 #endif
 #ifndef NO_CERTS
-    if ((!args->usingPSK) || (ssl->options.certWithExternPsk)) {
+#ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+    if ((!args->usingPSK) || (ssl->options.certWithExternPsk))
+#else
+    if (!args->usingPSK)
+#endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
+    {
         if ((ret = MatchSuite(ssl, ssl->clSuites)) < 0) {
         #ifdef WOLFSSL_ASYNC_CRYPT
             if (ret != WC_NO_ERR_TRACE(WC_PENDING_E))
@@ -7135,8 +7140,12 @@ int DoTls13ClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         /* Pick key share and Generate a new key if not present. */
         int doHelloRetry = 0;
 
-        /* If we assert the authenticity with certificats, this call already occured in the MatchSuites() function */
-        if(!ssl->options.certWithExternPsk) {
+#ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+        /* If we assert the authenticity with certificats, this call 
+           already occured in the MatchSuites() function */
+        if(!ssl->options.certWithExternPsk) 
+#endif /* WOLFSSL_CERT_WITH_EXTERN_PSK*/
+        {
             ret = TLSX_KeyShare_Establish(ssl, &doHelloRetry);
         }
 
@@ -12341,8 +12350,14 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
             }
         #endif
         #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
-            /* Server's authenticating with PSK must not send this. */
-            if ((ssl->options.pskNegotiated) && (!ssl->options.certWithExternPsk)) {
+            /* Server's authenticating with PSK must not send this. Except, if 
+               we want to send Certificats alongside the PSKs (see RFC8773) */
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+            if ((ssl->options.pskNegotiated) && (!ssl->options.certWithExternPsk)) 
+        #else
+            if(ssl->options.pskNegotiated)
+        #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
+            {
                 WOLFSSL_MSG("CertificateRequest received while using PSK");
                 WOLFSSL_ERROR_VERBOSE(SANITY_MSG_E);
                 return SANITY_MSG_E;
@@ -12435,9 +12450,14 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                     return OUT_OF_ORDER_E;
                 }
                 /* Must have seen certificate and verify from server except when
-                 * using PSK. */
+                 * using PSK solely without Certificate authentication. */
             #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
-                if ((ssl->options.pskNegotiated) && (!ssl->options.certWithExternPsk)) {
+            #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+                if ((ssl->options.pskNegotiated) && (!ssl->options.certWithExternPsk))
+            #else
+                if(ssl->options.pskNegotiated)
+            #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
+                {
                     if (ssl->options.serverState !=
                                          SERVER_ENCRYPTED_EXTENSIONS_COMPLETE) {
                         WOLFSSL_MSG("Finished received out of order - PSK");
@@ -12446,7 +12466,7 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                     }
                 }
                 else
-            #endif
+            #endif /* HAVE_SESSION_TICKET || !NO_PSK */
                 if (ssl->options.serverState != SERVER_CERT_VERIFY_COMPLETE) {
                     WOLFSSL_MSG("Finished received out of order - serverState");
                     WOLFSSL_ERROR_VERBOSE(OUT_OF_ORDER_E);
@@ -12480,8 +12500,12 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
             }
         #endif
         #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
+        #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
             if ((!ssl->options.pskNegotiated) || (ssl->options.certWithExternPsk))
-        #endif
+        #else
+            if(!ssl->options.pskNegotiated)
+        #endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
+        #endif /* HAVE_SESSION_TICKET || !NO_PSK */
             {
                 /* Must have received a Certificate message from client if
                  * verifying the peer. Empty certificate message indicates

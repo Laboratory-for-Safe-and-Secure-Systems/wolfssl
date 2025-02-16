@@ -3941,9 +3941,9 @@ struct WOLFSSL_CTX {
     byte        onlyPskDheKe:1;   /* Only use (EC)DHE with PSK */
 #endif
 #endif /* HAVE_SESSION_TICKET || !NO_PSK */
-#if !defined(NO_PSK)
+#if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
     byte        certWithExternPSK:1;
-#endif
+#endif /* WOLFSSL_CERT_WITH_EXTERN_PSK && !NO_PSK */
 #endif /* WOLFSSL_TLS13 */
     byte        mutualAuth:1;     /* Mutual authentication required */
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
@@ -5050,7 +5050,7 @@ struct Options {
     word16            onlyPskDheKe:1;     /* Only use (EC)DHE with PSK */
 #endif
 #endif
-#if defined(WOLFSSL_TLS13) && !defined(NO_PSK)
+#if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && !defined(NO_PSK)
     word16            certWithExternPsk:1;/* Send Certs while using PSKs */
 #endif
     word16            partialWrite:1;     /* only one msg per write call */
