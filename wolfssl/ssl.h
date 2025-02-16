@@ -3033,6 +3033,12 @@ enum { /* ssl Constants */
                                                         wc_psk_client_callback cb);
     WOLFSSL_API void wolfSSL_set_psk_client_callback(WOLFSSL* ssl,
                                                         wc_psk_client_callback cb);
+
+    #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+    WOLFSSL_API int wolfSSL_CTX_set_cert_with_extern_psk(WOLFSSL_CTX* ctx, int state);
+    WOLFSSL_API int wolfSSL_set_cert_with_extern_psk(WOLFSSL* ssl, int state);
+    #endif
+
     #ifdef OPENSSL_EXTRA
     typedef int (*wc_psk_use_session_cb_func)(WOLFSSL* ssl,
                             const WOLFSSL_EVP_MD* md, const unsigned char **id,

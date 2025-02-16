@@ -11779,7 +11779,30 @@ int wolfSSL_set_compression(WOLFSSL* ssl)
         ctx->psk_ctx = psk_ctx;
         return WOLFSSL_SUCCESS;
     }
-#endif /* NO_PSK */
+
+#ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
+    int wolfSSL_CTX_set_cert_with_extern_psk(WOLFSSL_CTX* ctx, int state)
+    {
+        /* We only allow the state of cerWithExternPSK to be 0 or 1, 
+           any other value and if ctx equals zero, we must return an error. */
+        if((ctx == NULL) || ((state != 1) && (state != 0)))
+            return WOLFSSL_FAILURE;
+        
+        ctx->certWithExternPSK = state;
+        return WOLFSSL_SUCCESS;
+    }
+    int wolfSSL_set_cert_with_extern_psk(WOLFSSL* ssl, int state)
+    {
+        /* We only allow the state of cerWithExternPSK to be 0 or 1, 
+           any other value and if ssl equals zero, we must return an error. */
+        if((ssl == NULL) || ((state != 1) && (state != 0)))
+            return WOLFSSL_FAILURE;
+        
+        ssl->options.certWithExternPsk = state;
+        return WOLFSSL_SUCCESS;
+    }
+#endif /* WOLFSSL_CERT_WITH_EXTERN_PSK */
+#endif /* !NO_PSK */
 
 
 #ifdef HAVE_ANON
