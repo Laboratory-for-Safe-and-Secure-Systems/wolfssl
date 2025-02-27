@@ -669,8 +669,8 @@ static int kyberkey_encapsulate(KyberKey* key, const byte* m, byte* r, byte* c)
 #endif
 #endif
 #ifdef WOLFSSL_MLKEM_ENCAPSULATE_SMALL_MEM
-    sword16* u;
-    sword16* v;
+    sword16* u = NULL;
+    sword16* v = NULL;
 #endif
 
     /* Establish parameters based on key type. */
