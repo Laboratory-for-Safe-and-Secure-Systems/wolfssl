@@ -445,6 +445,131 @@ int wc_PRF_TLS(byte* digest, word32 digLen, const byte* secret, word32 secLen,
             NULL, INVALID_DEVID);
     }
 
+    /* Extract data using HMAC, salt and input via an external key reference
+     * by the given id and devId.
+     * RFC 5869 - HMAC-based Extract-and-Expand Key Derivation Function (HKDF)
+     */
+    int wc_Tls13_HKDF_Extract_Id(byte* prk, const byte* salt, word32 saltLen,
+        const unsigned char* id, long sz, int digest, void* heap, int devId)
+    {
+        int ret;
+        word32 len = 0;
+        Hkdf hkdf;
+
+        switch (digest) {
+            #ifndef NO_SHA256
+            case WC_SHA256:
+                len = WC_SHA256_DIGEST_SIZE;
+                break;
+            #endif
+
+            #ifdef WOLFSSL_SHA384
+            case WC_SHA384:
+                len = WC_SHA384_DIGEST_SIZE;
+                break;
+            #endif
+
+            #ifdef WOLFSSL_TLS13_SHA512
+            case WC_SHA512:
+                len = WC_SHA512_DIGEST_SIZE;
+                break;
+            #endif
+
+            #ifdef WOLFSSL_SM3
+            case WC_SM3:
+                len = WC_SM3_DIGEST_SIZE;
+                break;
+            #endif
+
+            default:
+                return BAD_FUNC_ARG;
+        }
+        (void) len;
+
+#ifdef WOLFSSL_DEBUG_TLS
+        WOLFSSL_MSG("  Salt");
+        WOLFSSL_BUFFER(salt, saltLen);
+        WOLFSSL_MSG_EX("  IKM (external: devId=%d)", devId);
+        WOLFSSL_MSG("  ID");
+        WOLFSSL_BUFFER(id, sz);
+#endif
+
+        ret = wc_HkdfInit_Id(&hkdf, digest, (byte*)id, sz, heap, devId);
+        if (ret == 0) {
+            ret = wc_HkdfExtract(&hkdf, salt, saltLen, NULL, 0, prk);
+            wc_HkdfFree(&hkdf);
+        }
+
+#ifdef WOLFSSL_DEBUG_TLS
+        WOLFSSL_MSG("  PRK");
+        WOLFSSL_BUFFER(prk, len);
+#endif
+
+        return ret;
+    }
+
+    /* Extract data using HMAC, salt and input via an external key reference
+     * by the given label and devId.
+     * RFC 5869 - HMAC-based Extract-and-Expand Key Derivation Function (HKDF)
+     */
+    int wc_Tls13_HKDF_Extract_Label(byte* prk, const byte* salt, word32 saltLen,
+        const char* label, int digest, void* heap, int devId)
+    {
+        int ret;
+        word32 len = 0;
+        Hkdf hkdf;
+
+        switch (digest) {
+            #ifndef NO_SHA256
+            case WC_SHA256:
+                len = WC_SHA256_DIGEST_SIZE;
+                break;
+            #endif
+
+            #ifdef WOLFSSL_SHA384
+            case WC_SHA384:
+                len = WC_SHA384_DIGEST_SIZE;
+                break;
+            #endif
+
+            #ifdef WOLFSSL_TLS13_SHA512
+            case WC_SHA512:
+                len = WC_SHA512_DIGEST_SIZE;
+                break;
+            #endif
+
+            #ifdef WOLFSSL_SM3
+            case WC_SM3:
+                len = WC_SM3_DIGEST_SIZE;
+                break;
+            #endif
+
+            default:
+                return BAD_FUNC_ARG;
+        }
+        (void) len;
+
+#ifdef WOLFSSL_DEBUG_TLS
+        WOLFSSL_MSG("  Salt");
+        WOLFSSL_BUFFER(salt, saltLen);
+        WOLFSSL_MSG_EX("  IKM (external: devId=%d)", devId);
+        WOLFSSL_MSG_EX("  Label: %s", label);
+#endif
+
+        ret = wc_HkdfInit_Label(&hkdf, digest, label, heap, devId);
+        if (ret == 0) {
+            ret = wc_HkdfExtract(&hkdf, salt, saltLen, NULL, 0, prk);
+            wc_HkdfFree(&hkdf);
+        }
+
+#ifdef WOLFSSL_DEBUG_TLS
+        WOLFSSL_MSG("  PRK");
+        WOLFSSL_BUFFER(prk, len);
+#endif
+
+        return ret;
+    }
+
     /* Expand data using HMAC, salt and label and info.
      * TLS v1.3 defines this function. */
     int wc_Tls13_HKDF_Expand_Label_ex(byte* okm, word32 okmLen,

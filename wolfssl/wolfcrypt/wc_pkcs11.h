@@ -89,6 +89,7 @@ enum Pkcs11KeyType {
     PKCS11_KEY_TYPE_EC,
     PKCS11_KEY_TYPE_DILITHIUM,
     PKCS11_KEY_TYPE_FALCON,
+    PKCS11_KEY_TYPE_HKDF,
 };
 
 /* Types if certificates that can be stored. */
