@@ -197,6 +197,49 @@ WOLFSSL_LOCAL int _InitHmac(Hmac* hmac, int type, void* heap);
 
 #ifdef HAVE_HKDF
 
+/* HKDF digest */
+struct Hkdf {
+    Hmac        hmac;
+    int         type;                 /* hash type */
+    void*       heap;                 /* heap hint */
+
+#ifdef WOLF_CRYPTO_CB
+    int         devId;
+    const byte* key;
+    word16      keyLen;
+#endif
+#ifdef WOLF_PRIVATE_KEY_ID
+    byte        id[HMAC_MAX_ID_LEN];
+    int         idLen;
+    char        label[HMAC_MAX_LABEL_LEN];
+    int         labelLen;
+#endif
+};
+
+#ifndef WC_HKDF_TYPE_DEFINED
+    typedef struct Hkdf Hkdf;
+    #define WC_HKDF_TYPE_DEFINED
+#endif
+
+WOLFSSL_API int wc_HkdfInit(Hkdf* hkdf, int type, void* heap, int devId);
+#ifdef WOLF_PRIVATE_KEY_ID
+WOLFSSL_API int wc_HkdfInit_Id(Hkdf* hkdf, int type, byte* id, int len,
+                               void* heap, int devId);
+WOLFSSL_API int wc_HkdfInit_Label(Hkdf* hkdf, int type, const char* label,
+                                  void* heap, int devId);
+#endif
+WOLFSSL_API void wc_HkdfFree(Hkdf* hkdf);
+
+WOLFSSL_API int wc_HkdfExtract(Hkdf* hkdf, const byte* salt, word32 saltSz,
+                               const byte* inKey, word32 inKeySz, byte* out);
+WOLFSSL_API int wc_HkdfExpand(Hkdf* hkdf, const byte* inKey, word32 inKeySz,
+                              const byte* info, word32 infoSz, byte* out,
+                              word32 outSz);
+WOLFSSL_API int wc_Hkdf(Hkdf* hkdf, const byte* inKey, word32 inKeySz,
+                        const byte* salt, word32 saltSz, const byte* info,
+                        word32 infoSz, byte* out, word32 outSz);
+
+/* Legacy methods for backwards compatibility */
 WOLFSSL_API int wc_HKDF_Extract_ex(int type, const byte* salt, word32 saltSz,
                                 const byte* inKey, word32 inKeySz, byte* out,
                                 void* heap, int devId);

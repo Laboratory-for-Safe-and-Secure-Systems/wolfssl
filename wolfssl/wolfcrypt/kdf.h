@@ -88,6 +88,14 @@ WOLFSSL_API int wc_Tls13_HKDF_Extract_ex(byte* prk, const byte* salt,
 WOLFSSL_API int wc_Tls13_HKDF_Extract(byte* prk, const byte* salt,
                           word32 saltLen, byte* ikm, word32 ikmLen, int digest);
 
+WOLFSSL_API int wc_Tls13_HKDF_Extract_Id(byte* prk, const byte* salt,
+                          word32 saltLen, const unsigned char* id, long sz,
+                          int digest, void* heap, int devId);
+
+WOLFSSL_API int wc_Tls13_HKDF_Extract_Label(byte* prk, const byte* salt,
+                          word32 saltLen, const char* label, int digest,
+                          void* heap, int devId);
+
 WOLFSSL_API int wc_Tls13_HKDF_Expand_Label_ex(byte* okm, word32 okmLen,
                              const byte* prk, word32 prkLen,
                              const byte* protocol, word32 protocolLen,

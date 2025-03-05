@@ -1167,9 +1167,22 @@ int DeriveEarlySecret(WOLFSSL* ssl)
 #endif
     PRIVATE_KEY_UNLOCK();
 #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
-    ret = Tls13_HKDF_Extract(ssl, ssl->arrays->secret, NULL, 0,
-            ssl->arrays->psk_key, (int)ssl->arrays->psk_keySz,
-            mac2hash(ssl->specs.mac_algorithm));
+    if (ssl->arrays->psk_keyId) {
+        ret = wc_Tls13_HKDF_Extract_Id(ssl->arrays->secret, NULL, 0,
+                ssl->arrays->psk_key, (int)ssl->arrays->psk_keySz,
+                mac2hash(ssl->specs.mac_algorithm), ssl->heap,
+                ssl->arrays->psk_keyDevId);
+    }
+    else if (ssl->arrays->psk_keyLabel) {
+        ret = wc_Tls13_HKDF_Extract_Label(ssl->arrays->secret, NULL, 0,
+                (char*)ssl->arrays->psk_key, mac2hash(ssl->specs.mac_algorithm),
+                ssl->heap, ssl->arrays->psk_keyDevId);
+    }
+    else {
+        ret = Tls13_HKDF_Extract(ssl, ssl->arrays->secret, NULL, 0,
+                ssl->arrays->psk_key, (int)ssl->arrays->psk_keySz,
+                mac2hash(ssl->specs.mac_algorithm));
+    }
 #else
     ret = Tls13_HKDF_Extract(ssl, ssl->arrays->secret, NULL, 0,
             ssl->arrays->masterSecret, 0, mac2hash(ssl->specs.mac_algorithm));
@@ -14144,6 +14157,36 @@ const char* wolfSSL_get_cipher_name_by_hash(WOLFSSL* ssl, const char* hash)
         }
     }
     return name;
+}
+
+int wolfSSL_use_psk_key_id(WOLFSSL* ssl, const unsigned char* id, long sz,
+                       int devId)
+{
+    if (ssl == NULL || id == NULL || sz <= 0)
+        return BAD_FUNC_ARG;
+
+    if (sz > MAX_PSK_KEY_LEN)
+        return BUFFER_E;
+
+    ssl->arrays->psk_keyId = 1;
+    ssl->arrays->psk_keyDevId = devId;
+
+    /* The actual ID is stored in the psk via the callback logic. */
+
+    return 0;
+}
+
+int wolfSSL_use_psk_key_label(WOLFSSL* ssl, const char* label, int devId)
+{
+    if (ssl == NULL || label == NULL || XSTRLEN(label) == 0)
+        return BAD_FUNC_ARG;
+
+    ssl->arrays->psk_keyLabel = 1;
+    ssl->arrays->psk_keyDevId = devId;
+
+    /* The actual label is stored in the psk via the callback logic. */
+
+    return 0;
 }
 #endif /* !NO_PSK */
 

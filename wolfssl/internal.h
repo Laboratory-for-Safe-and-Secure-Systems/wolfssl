@@ -5176,6 +5176,9 @@ typedef struct Arrays {
     char            client_identity[MAX_PSK_ID_LEN + NULL_TERM_LEN];
     char            server_hint[MAX_PSK_ID_LEN + NULL_TERM_LEN];
     byte            psk_key[MAX_PSK_KEY_LEN];
+    byte            psk_keyId:1;
+    byte            psk_keyLabel:1;
+    int             psk_keyDevId;
 #endif
     byte            clientRandom[RAN_LEN];
 #if defined(WOLFSSL_TLS13) && defined(HAVE_ECH)
