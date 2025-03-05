@@ -3098,6 +3098,11 @@ enum { /* ssl Constants */
 #ifdef WOLFSSL_TLS13
     WOLFSSL_API const char* wolfSSL_get_cipher_name_by_hash(WOLFSSL* ssl,
         const char* hash);
+
+    WOLFSSL_API int wolfSSL_use_psk_key_id(WOLFSSL* ssl, const unsigned char* id,
+        long sz, int devId);
+    WOLFSSL_API int wolfSSL_use_psk_key_label(WOLFSSL* ssl, const char* label,
+        int devId);
 #endif
 #endif /* NO_PSK */
 
