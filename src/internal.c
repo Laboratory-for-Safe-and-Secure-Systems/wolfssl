@@ -8641,6 +8641,10 @@ void wolfSSL_ResourceFree(WOLFSSL* ssl)
         }
     #endif
 #endif
+#if defined(HAVE_DILITHIUM)
+    FreeKey(ssl, DYNAMIC_TYPE_DILITHIUM, (void**)&ssl->peerDilithiumKey);
+    ssl->peerDilithiumKeyPresent = 0;
+#endif
 #if defined(HAVE_FALCON)
     FreeKey(ssl, DYNAMIC_TYPE_FALCON, (void**)&ssl->peerFalconKey);
     ssl->peerFalconKeyPresent = 0;
