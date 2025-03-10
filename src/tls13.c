@@ -5893,20 +5893,21 @@ int FindPskSuite(const WOLFSSL* ssl, PreSharedKey* psk, byte* psk_key,
     (void)suite;
 
     if (ssl->options.server_psk_tls13_cb != NULL) {
-         *psk_keySz = ssl->options.server_psk_tls13_cb((WOLFSSL*)ssl,
-             (char*)psk->identity, psk_key, MAX_PSK_KEY_LEN, &cipherName);
-         if (*psk_keySz != 0) {
-             int cipherSuiteFlags = WOLFSSL_CIPHER_SUITE_FLAG_NONE;
-             *found = (GetCipherSuiteFromName(cipherName, &cipherSuite0,
-                 &cipherSuite, NULL, NULL, &cipherSuiteFlags) == 0);
-             (void)cipherSuiteFlags;
-         }
+        cipherName = GetCipherNameInternal(*suite, *(suite + 1));
+        *psk_keySz = ssl->options.server_psk_tls13_cb((WOLFSSL*)ssl,
+            (char*)psk->identity, psk_key, MAX_PSK_KEY_LEN, &cipherName);
+        if (*psk_keySz != 0) {
+            int cipherSuiteFlags = WOLFSSL_CIPHER_SUITE_FLAG_NONE;
+            *found = (GetCipherSuiteFromName(cipherName, &cipherSuite0,
+                        &cipherSuite, NULL, NULL, &cipherSuiteFlags) == 0);
+            (void)cipherSuiteFlags;
+        }
     }
     if (*found == 0 && (ssl->options.server_psk_cb != NULL)) {
-         *psk_keySz = ssl->options.server_psk_cb((WOLFSSL*)ssl,
-                             (char*)psk->identity, psk_key,
-                             MAX_PSK_KEY_LEN);
-         *found = (*psk_keySz != 0);
+        *psk_keySz = ssl->options.server_psk_cb((WOLFSSL*)ssl,
+                            (char*)psk->identity, psk_key,
+                            MAX_PSK_KEY_LEN);
+        *found = (*psk_keySz != 0);
     }
     if (*found) {
         if (*psk_keySz > MAX_PSK_KEY_LEN &&
