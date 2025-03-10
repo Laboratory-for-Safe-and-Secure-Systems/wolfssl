@@ -16116,6 +16116,9 @@ int wolfSSL_get_verify_mode(const WOLFSSL* ssl)
         if (ssl->options.failNoCertxPSK) {
             mode |= WOLFSSL_VERIFY_FAIL_EXCEPT_PSK;
         }
+        if (ssl->options.failNoPSK) {
+            mode |= WOLFSSL_VERIFY_FAIL_IF_NO_PSK;
+        }
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
         if (ssl->options.verifyPostHandshake) {
             mode |= WOLFSSL_VERIFY_POST_HANDSHAKE;
@@ -16148,6 +16151,9 @@ int wolfSSL_CTX_get_verify_mode(const WOLFSSL_CTX* ctx)
         }
         if (ctx->failNoCertxPSK) {
             mode |= WOLFSSL_VERIFY_FAIL_EXCEPT_PSK;
+        }
+        if (ctx->failNoPSK) {
+            mode |= WOLFSSL_VERIFY_FAIL_IF_NO_PSK;
         }
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
         if (ctx->verifyPostHandshake) {
