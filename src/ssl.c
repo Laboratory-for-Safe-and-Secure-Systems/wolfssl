@@ -8958,6 +8958,7 @@ typedef struct {
     byte verifyNone:1;
     byte failNoCert:1;
     byte failNoCertxPSK:1;
+    byte failNoPSK:1;
     byte verifyPostHandshake:1;
 } SetVerifyOptions;
 
@@ -8975,6 +8976,8 @@ static SetVerifyOptions ModeToVerifyOptions(int mode)
                     (mode & WOLFSSL_VERIFY_FAIL_EXCEPT_PSK) != 0;
             opts.failNoCert =
                     (mode & WOLFSSL_VERIFY_FAIL_IF_NO_PEER_CERT) != 0;
+            opts.failNoPSK =
+                    (mode & WOLFSSL_VERIFY_FAIL_IF_NO_PSK) != 0;
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
             opts.verifyPostHandshake =
                     (mode & WOLFSSL_VERIFY_POST_HANDSHAKE) != 0;
@@ -9000,6 +9003,7 @@ void wolfSSL_CTX_set_verify(WOLFSSL_CTX* ctx, int mode, VerifyCallback vc)
     ctx->verifyPeer     = opts.verifyPeer;
     ctx->failNoCert     = opts.failNoCert;
     ctx->failNoCertxPSK = opts.failNoCertxPSK;
+    ctx->failNoPSK      = opts.failNoPSK;
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
     ctx->verifyPostHandshake = opts.verifyPostHandshake;
 #endif
@@ -9035,6 +9039,7 @@ void wolfSSL_set_verify(WOLFSSL* ssl, int mode, VerifyCallback vc)
     ssl->options.verifyPeer = opts.verifyPeer;
     ssl->options.failNoCert = opts.failNoCert;
     ssl->options.failNoCertxPSK = opts.failNoCertxPSK;
+    ssl->options.failNoPSK = opts.failNoPSK;
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
     ssl->options.verifyPostHandshake = opts.verifyPostHandshake;
 #endif
@@ -21919,6 +21924,9 @@ int wolfSSL_get_verify_mode(const WOLFSSL* ssl)
         if (ssl->options.failNoCertxPSK) {
             mode |= WOLFSSL_VERIFY_FAIL_EXCEPT_PSK;
         }
+        if (ssl->options.failNoPSK) {
+            mode |= WOLFSSL_VERIFY_FAIL_IF_NO_PSK;
+        }
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
         if (ssl->options.verifyPostHandshake) {
             mode |= WOLFSSL_VERIFY_POST_HANDSHAKE;
@@ -21951,6 +21959,9 @@ int wolfSSL_CTX_get_verify_mode(const WOLFSSL_CTX* ctx)
         }
         if (ctx->failNoCertxPSK) {
             mode |= WOLFSSL_VERIFY_FAIL_EXCEPT_PSK;
+        }
+        if (ctx->failNoPSK) {
+            mode |= WOLFSSL_VERIFY_FAIL_IF_NO_PSK;
         }
 #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_POST_HANDSHAKE_AUTH)
         if (ctx->verifyPostHandshake) {
