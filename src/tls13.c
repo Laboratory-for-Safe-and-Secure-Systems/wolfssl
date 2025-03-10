@@ -5590,6 +5590,11 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         while (psk != NULL && !psk->chosen)
             psk = psk->next;
         if (psk == NULL) {
+            if (ssl->options.failNoPSK) {
+                WOLFSSL_MSG("No PSK key found");
+                WOLFSSL_ERROR_VERBOSE(PSK_MISSING_ERROR);
+                return PSK_MISSING_ERROR;
+            }
             ssl->options.resuming = 0;
             ssl->arrays->psk_keySz = 0;
             XMEMSET(ssl->arrays->psk_key, 0, MAX_PSK_KEY_LEN);
@@ -6247,6 +6252,12 @@ static int CheckPreSharedKeys(WOLFSSL* ssl, const byte* input, word32 helloSz,
 #endif
         if (usingPSK)
             *usingPSK = 0;
+
+        if (ssl->options.havePSK && ssl->options.failNoPSK) {
+            WOLFSSL_ERROR_VERBOSE(PSK_MISSING_ERROR);
+            return PSK_MISSING_ERROR;
+        }
+
         /* Hash data up to binders for deriving binders in PSK extension. */
         ret = HashInput(ssl, input,  (int)helloSz);
         return ret;
@@ -6412,6 +6423,11 @@ static int CheckPreSharedKeys(WOLFSSL* ssl, const byte* input, word32 helloSz,
     }
 #if defined(WOLFSSL_PSK_ID_PROTECTION) || defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
     else {
+        if (ssl->options.havePSK && ssl->options.failNoPSK) {
+            WOLFSSL_ERROR_VERBOSE(PSK_MISSING_ERROR);
+            return PSK_MISSING_ERROR;
+        }
+
     #ifdef WOLFSSL_CERT_WITH_EXTERN_PSK
         /* If no PSK is found, we check remove the extension to make sure it
          * is not sent back to the client */
@@ -10833,6 +10849,20 @@ int DoTls13Finished(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             (!ssl->options.havePeerCert || !ssl->options.havePeerVerify)) {
             ret = NO_PEER_CERT; /* NO_PEER_VERIFY */
             WOLFSSL_MSG("TLS v1.3 client did not present peer cert");
+            DoCertFatalAlert(ssl, ret);
+            return ret;
+        }
+    }
+#endif
+
+#if !defined(NO_PSK) && defined(WOLFSSL_CERT_WITH_EXTERN_PSK)
+    /* Verify the server sent a certificate if requested */
+    if (ssl->options.side == WOLFSSL_CLIENT_END && ssl->options.pskNegotiated &&
+            ssl->options.failNoCert) {
+        if ((TLSX_Find(ssl->extensions, TLSX_CERT_WITH_EXTERN_PSK) != NULL) &&
+                (!ssl->options.havePeerCert || !ssl->options.havePeerVerify)) {
+            ret = NO_PEER_CERT;
+            WOLFSSL_MSG("TLS v1.3 server did not present peer cert");
             DoCertFatalAlert(ssl, ret);
             return ret;
         }
