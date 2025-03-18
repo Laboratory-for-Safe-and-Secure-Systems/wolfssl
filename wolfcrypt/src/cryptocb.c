@@ -1760,6 +1760,104 @@ int wc_CryptoCb_Hmac(Hmac* hmac, int macType, const byte* in, word32 inSz,
 
     return wc_CryptoCb_TranslateErrorCode(ret);
 }
+
+#ifdef HAVE_HKDF
+int wc_CryptoCb_HkdfExtract(Hkdf* hkdf, int type, const byte* salt,
+                            word32 saltSz, byte* out)
+{
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    CryptoCb* dev;
+
+    if (hkdf == NULL)
+        return ret;
+
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(hkdf->devId, WC_ALGO_TYPE_HKDF);
+    if (dev && dev->cb) {
+        wc_CryptoInfo cryptoInfo;
+        XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_HKDF;
+        cryptoInfo.hkdf.hkdf = hkdf;
+        cryptoInfo.hkdf.type = type;
+        cryptoInfo.hkdf.salt = salt;
+        cryptoInfo.hkdf.saltSz = saltSz;
+        cryptoInfo.hkdf.info = NULL;
+        cryptoInfo.hkdf.infoSz = 0;
+        cryptoInfo.hkdf.out = out;
+        cryptoInfo.hkdf.outSz = wc_HashGetDigestSize(type);
+        cryptoInfo.hkdf.extract = 1;
+        cryptoInfo.hkdf.expand = 0;
+
+        ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
+    }
+
+    return wc_CryptoCb_TranslateErrorCode(ret);
+}
+
+int wc_CryptoCb_HkdfExpand(Hkdf* hkdf, int type, const byte* info,
+                           word32 infoSz, byte* out, word32 outSz)
+{
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    CryptoCb* dev;
+
+    if (hkdf == NULL)
+        return ret;
+
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(hkdf->devId, WC_ALGO_TYPE_HKDF);
+    if (dev && dev->cb) {
+        wc_CryptoInfo cryptoInfo;
+        XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_HKDF;
+        cryptoInfo.hkdf.hkdf = hkdf;
+        cryptoInfo.hkdf.type = type;
+        cryptoInfo.hkdf.salt = NULL;
+        cryptoInfo.hkdf.saltSz = 0;
+        cryptoInfo.hkdf.info = info;
+        cryptoInfo.hkdf.infoSz = infoSz;
+        cryptoInfo.hkdf.out = out;
+        cryptoInfo.hkdf.outSz = outSz;
+        cryptoInfo.hkdf.extract = 0;
+        cryptoInfo.hkdf.expand = 1;
+
+        ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
+    }
+
+    return wc_CryptoCb_TranslateErrorCode(ret);
+}
+
+int wc_CryptoCb_Hkdf(Hkdf* hkdf, int type, const byte* salt, word32 saltSz,
+                     const byte* info, word32 infoSz, byte* out, word32 outSz)
+{
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    CryptoCb* dev;
+
+    if (hkdf == NULL)
+        return ret;
+
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(hkdf->devId, WC_ALGO_TYPE_HKDF);
+    if (dev && dev->cb) {
+        wc_CryptoInfo cryptoInfo;
+        XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_HKDF;
+        cryptoInfo.hkdf.hkdf = hkdf;
+        cryptoInfo.hkdf.type = type;
+        cryptoInfo.hkdf.salt = salt;
+        cryptoInfo.hkdf.saltSz = saltSz;
+        cryptoInfo.hkdf.info = info;
+        cryptoInfo.hkdf.infoSz = infoSz;
+        cryptoInfo.hkdf.out = out;
+        cryptoInfo.hkdf.outSz = outSz;
+        cryptoInfo.hkdf.extract = 1;
+        cryptoInfo.hkdf.expand = 1;
+
+        ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
+    }
+
+    return wc_CryptoCb_TranslateErrorCode(ret);
+}
+#endif /* HAVE_HKDF */
 #endif /* !NO_HMAC */
 
 #ifndef WC_NO_RNG
