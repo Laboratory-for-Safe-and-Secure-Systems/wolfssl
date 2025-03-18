@@ -470,6 +470,20 @@ typedef struct wc_CryptoInfo {
         void *heap;
     } ca_certs;
 #endif
+#if !defined(NO_HMAC) && defined(HAVE_HKDF)
+    struct {
+        Hkdf*       hkdf;
+        int         type;
+        const byte* salt;
+        word32      saltSz;
+        const byte* info;
+        word32      infoSz;
+        byte*       out;
+        word32      outSz;
+        byte        extract;
+        byte        expand;
+    } hkdf;
+#endif
 #ifdef WOLF_CRYPTO_CB_CMD
     struct {      /* uses wc_AlgoType=ALGO_NONE */
         int type; /* enum wc_CryptoCbCmdType */
@@ -672,6 +686,17 @@ WOLFSSL_LOCAL int wc_CryptoCb_Sha3Hash(wc_Sha3* sha3, int type, const byte* in,
 #ifndef NO_HMAC
 WOLFSSL_LOCAL int wc_CryptoCb_Hmac(Hmac* hmac, int macType, const byte* in,
     word32 inSz, byte* digest);
+
+#ifdef HAVE_HKDF
+WOLFSSL_LOCAL int wc_CryptoCb_HkdfExtract(Hkdf* hkdf, int type,
+    const byte* salt, word32 saltSz, byte* out);
+
+WOLFSSL_LOCAL int wc_CryptoCb_HkdfExpand(Hkdf* hkdf, int type,
+    const byte* info, word32 infoSz, byte* out, word32 outSz);
+
+WOLFSSL_LOCAL int wc_CryptoCb_Hkdf(Hkdf* hkdf, int type, const byte* salt,
+    word32 saltSz, const byte* info, word32 infoSz, byte* out, word32 outSz);
+#endif /* HAVE_HKDF */
 #endif /* !NO_HMAC */
 
 #ifndef WC_NO_RNG
