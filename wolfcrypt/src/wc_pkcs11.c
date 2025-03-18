@@ -355,6 +355,11 @@ static void pkcs11_dump_template(const char* name, CK_ATTRIBUTE* templ,
             WOLFSSL_MSG(line);
             break;
         case PKCS11_FMT_DATA:
+            if (templ[i].ulValueLen == CK_UNAVAILABLE_INFORMATION) {
+                XSNPRINTF(line, sizeof(line), "%25s: unavailable", type);
+                WOLFSSL_MSG(line);
+                break;
+            }
             XSNPRINTF(line, sizeof(line), "%25s: %ld", type,
                       templ[i].ulValueLen);
             WOLFSSL_MSG(line);
@@ -1175,27 +1180,29 @@ void wc_Pkcs11Token_Close(Pkcs11Token* token)
 /*
  * Create a secret key.
  *
- * @param  [out]  key       Handle to key object.
- * @param  [in]   session   Session object.
- * @param  [in]   keyType   Type of secret key to create.
- * @param  [in]   data      Data of the secret key.
- * @param  [in]   len       Length of data in bytes.
- * @param  [in]   id        Identifier to set against key.
- * @param  [in]   idLen     Length of identifier.
- * @param  [in]   label     Label to set against key.
- * @param  [in]   labelLen  Length of label.
- * @param  [in]   op        Operation to support with key.
+ * @param  [out]  key         Handle to key object.
+ * @param  [in]   session     Session object.
+ * @param  [in]   keyType     Type of secret key to create.
+ * @param  [in]   data        Data of the secret key.
+ * @param  [in]   len         Length of data in bytes.
+ * @param  [in]   id          Identifier to set against key.
+ * @param  [in]   idLen       Length of identifier.
+ * @param  [in]   label       Label to set against key.
+ * @param  [in]   labelLen    Length of label.
+ * @param  [in]   op          Operation to support with key.
+ * @param  [in]   persistent  Boolean indicating to store key persistently.
  * @return   WC_HW_E when another PKCS#11 library call fails.
  * @return   0 on success.
  */
 static int Pkcs11CreateSecretKey(CK_OBJECT_HANDLE* key, Pkcs11Session* session,
                                  CK_KEY_TYPE keyType, unsigned char* data,
                                  int len, unsigned char* id, int idLen,
-                                 char* label, int labelLen, int op)
+                                 char* label, int labelLen, int op,
+                                 int persistent)
 {
     int              ret = 0;
     CK_RV            rv;
-    /* Empty entries for optional label/ID. */
+    /* Empty entries for optional label/ID and persistent flag. */
     CK_ATTRIBUTE     keyTemplateEncDec[] = {
         { CKA_CLASS,    &secretKeyClass, sizeof(secretKeyClass) },
         { CKA_KEY_TYPE, &keyType,        sizeof(keyType)        },
@@ -1203,9 +1210,10 @@ static int Pkcs11CreateSecretKey(CK_OBJECT_HANDLE* key, Pkcs11Session* session,
         { CKA_DECRYPT,  &ckTrue,         sizeof(ckTrue)         },
         { CKA_VALUE,    NULL,            0                      },
         { 0,            NULL,            0                      },
+        { 0,            NULL,            0                      },
         { 0,            NULL,            0                      }
     };
-    /* Empty entries for optional label/ID. */
+    /* Empty entries for optional label/ID and persistent flag. */
     CK_ATTRIBUTE     keyTemplateSignVfy[] = {
         { CKA_CLASS,    &secretKeyClass, sizeof(secretKeyClass) },
         { CKA_KEY_TYPE, &keyType,        sizeof(keyType)        },
@@ -1213,10 +1221,21 @@ static int Pkcs11CreateSecretKey(CK_OBJECT_HANDLE* key, Pkcs11Session* session,
         { CKA_VERIFY,   &ckTrue,         sizeof(ckTrue)         },
         { CKA_VALUE,    NULL,            0                      },
         { 0,            NULL,            0                      },
+        { 0,            NULL,            0                      },
+        { 0,            NULL,            0                      }
+    };
+    /* Empty entries for optional label/ID and persistent flag. */
+    CK_ATTRIBUTE     keyTemplateDerive[] = {
+        { CKA_CLASS,    &secretKeyClass, sizeof(secretKeyClass) },
+        { CKA_KEY_TYPE, &keyType,        sizeof(keyType)        },
+        { CKA_DERIVE,   &ckTrue,         sizeof(ckTrue)         },
+        { CKA_VALUE,    NULL,            0                      },
+        { 0,            NULL,            0                      },
+        { 0,            NULL,            0                      },
         { 0,            NULL,            0                      }
     };
     CK_ATTRIBUTE*    keyTemplate = NULL;
-    /* 5 mandatory entries + 2 optional. */
+    /* 5 mandatory entries + 3 optional. */
     int              keyTmplCnt = 5;
 
     WOLFSSL_MSG("PKCS#11: Create Secret Key");
@@ -1226,6 +1245,10 @@ static int Pkcs11CreateSecretKey(CK_OBJECT_HANDLE* key, Pkcs11Session* session,
     }
     else if (op == CKA_SIGN) {
         keyTemplate = keyTemplateSignVfy;
+    }
+    else if (op == CKA_DERIVE) {
+        keyTemplate = keyTemplateDerive;
+        keyTmplCnt = 4;
     }
     else {
         WOLFSSL_MSG("PKCS#11: Invalid operation type");
@@ -1246,6 +1269,12 @@ static int Pkcs11CreateSecretKey(CK_OBJECT_HANDLE* key, Pkcs11Session* session,
             keyTemplate[keyTmplCnt].type       = CKA_ID;
             keyTemplate[keyTmplCnt].pValue     = id;
             keyTemplate[keyTmplCnt].ulValueLen = idLen;
+            keyTmplCnt++;
+        }
+        if (persistent) {
+            keyTemplate[keyTmplCnt].type       = CKA_TOKEN;
+            keyTemplate[keyTmplCnt].pValue     = &ckTrue;
+            keyTemplate[keyTmplCnt].ulValueLen = sizeof(ckTrue);
             keyTmplCnt++;
         }
 
@@ -2165,7 +2194,8 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
                                                 aes->keylen,
                                                 (unsigned char*)aes->id,
                                                 aes->idLen, aes->label,
-                                                aes->labelLen, CKA_ENCRYPT);
+                                                aes->labelLen, CKA_ENCRYPT,
+                                                persistent);
                 }
                 if (ret == 0 && clear)
                     ForceZero(aes->devKey, aes->keylen);
@@ -2183,7 +2213,8 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
                                                 aes->keylen,
                                                 (unsigned char*)aes->id,
                                                 aes->idLen, aes->label,
-                                                aes->labelLen, CKA_ENCRYPT);
+                                                aes->labelLen, CKA_ENCRYPT,
+                                                persistent);
                 }
                 if (ret == 0 && clear)
                     ForceZero(aes->devKey, aes->keylen);
@@ -2208,7 +2239,8 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
                                                 hmac->keyLen,
                                                 (unsigned char*)hmac->id,
                                                 hmac->idLen, hmac->label,
-                                                hmac->labelLen, CKA_SIGN);
+                                                hmac->labelLen, CKA_SIGN,
+                                                persistent);
                     if (ret == WC_NO_ERR_TRACE(WC_HW_E)) {
                         ret = Pkcs11CreateSecretKey(&privKey, &session,
                                                    CKK_GENERIC_SECRET,
@@ -2216,7 +2248,8 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
                                                    hmac->keyLen,
                                                    (unsigned char*)hmac->id,
                                                    hmac->idLen, hmac->label,
-                                                   hmac->labelLen, CKA_SIGN);
+                                                   hmac->labelLen, CKA_SIGN,
+                                                   persistent);
                     }
                 }
                 break;
@@ -2313,6 +2346,26 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
                     ForceZero(dilithiumKey->k, sizeof(dilithiumKey->k));
                 }
             #endif
+                break;
+            }
+    #endif
+    #if !defined(NO_HMAC) && defined(HAVE_HKDF)
+            case PKCS11_KEY_TYPE_HKDF: {
+                Hkdf* hkdf = (Hkdf*)key;
+                CK_MECHANISM_INFO mechInfo;
+
+                ret = Pkcs11MechAvail(&session, CKM_HKDF_DERIVE, &mechInfo);
+                if ((ret == 0) && (hkdf->keyLen >= mechInfo.ulMinKeySize) &&
+                    (hkdf->keyLen <= mechInfo.ulMaxKeySize)) {
+                    ret = Pkcs11CreateSecretKey(&privKey, &session,
+                                                CKK_GENERIC_SECRET,
+                                                (unsigned char*)hkdf->key,
+                                                hkdf->keyLen,
+                                                (unsigned char*)hkdf->id,
+                                                hkdf->idLen, hkdf->label,
+                                                hkdf->labelLen, CKA_DERIVE,
+                                                persistent);
+                }
                 break;
             }
     #endif
@@ -3575,7 +3628,9 @@ static int Pkcs11ExtractSecret(Pkcs11Session* session, CK_OBJECT_HANDLE secret,
     }
     PKCS11_DUMP_TEMPLATE("Secret Length", tmpl, tmplCnt);
     if (ret == 0) {
-        if (tmpl[0].ulValueLen > *outLen)
+        if (tmpl[0].ulValueLen == CK_UNAVAILABLE_INFORMATION)
+            ret = WC_HW_E;
+        else if (tmpl[0].ulValueLen > *outLen)
             ret = BUFFER_E;
     }
     if (ret == 0) {
@@ -5756,7 +5811,7 @@ static int Pkcs11AesGcmEncrypt(Pkcs11Session* session, wc_CryptoInfo* info)
             ret = Pkcs11CreateSecretKey(&key, session, CKK_AES,
                                         (unsigned char*)aes->devKey,
                                         aes->keylen, NULL, 0, NULL, 0,
-                                        CKA_ENCRYPT);
+                                        CKA_ENCRYPT, 0);
         }
         else if (aes->labelLen != 0) {
             ret = Pkcs11FindKeyByLabel(&key, CKO_SECRET_KEY, CKK_AES, session,
@@ -5850,7 +5905,7 @@ static int Pkcs11AesGcmDecrypt(Pkcs11Session* session, wc_CryptoInfo* info)
             ret = Pkcs11CreateSecretKey(&key, session, CKK_AES,
                                         (unsigned char*)aes->devKey,
                                         aes->keylen, NULL, 0, NULL, 0,
-                                        CKA_DECRYPT);
+                                        CKA_DECRYPT, 0);
         }
         else if (aes->labelLen != 0) {
             ret = Pkcs11FindKeyByLabel(&key, CKO_SECRET_KEY, CKK_AES, session,
@@ -5958,7 +6013,7 @@ static int Pkcs11AesCbcEncrypt(Pkcs11Session* session, wc_CryptoInfo* info)
             ret = Pkcs11CreateSecretKey(&key, session, CKK_AES,
                                         (unsigned char*)aes->devKey,
                                         aes->keylen, NULL, 0, NULL, 0,
-                                        CKA_ENCRYPT);
+                                        CKA_ENCRYPT, 0);
         }
         else if (aes->labelLen != 0) {
             ret = Pkcs11FindKeyByLabel(&key, CKO_SECRET_KEY, CKK_AES, session,
@@ -6033,7 +6088,7 @@ static int Pkcs11AesCbcDecrypt(Pkcs11Session* session, wc_CryptoInfo* info)
             ret = Pkcs11CreateSecretKey(&key, session, CKK_AES,
                                         (unsigned char*)aes->devKey,
                                         aes->keylen, NULL, 0, NULL, 0,
-                                        CKA_DECRYPT);
+                                        CKA_DECRYPT, 0);
         }
         else if (aes->labelLen != 0) {
             ret = Pkcs11FindKeyByLabel(&key, CKO_SECRET_KEY, CKK_AES, session,
@@ -6292,11 +6347,11 @@ static int Pkcs11Hmac(Pkcs11Session* session, wc_CryptoInfo* info)
         if (ret == 0 && hmac->idLen == 0 && hmac->labelLen == 0) {
             ret = Pkcs11CreateSecretKey(&key, session, keyType,
                                     (unsigned char*)hmac->keyRaw, hmac->keyLen,
-                                    NULL, 0, NULL, 0, CKA_SIGN);
+                                    NULL, 0, NULL, 0, CKA_SIGN, 0);
             if (ret == WC_NO_ERR_TRACE(WC_HW_E)) {
                 ret = Pkcs11CreateSecretKey(&key, session, CKK_GENERIC_SECRET,
                                     (unsigned char*)hmac->keyRaw, hmac->keyLen,
-                                    NULL, 0, NULL, 0, CKA_SIGN);
+                                    NULL, 0, NULL, 0, CKA_SIGN, 0);
             }
 
         }
@@ -6376,7 +6431,145 @@ static int Pkcs11Hmac(Pkcs11Session* session, wc_CryptoInfo* info)
 
     return ret;
 }
-#endif
+
+#ifdef HAVE_HKDF
+static int Pkcs11Hkdf(Pkcs11Session* session, wc_CryptoInfo* info)
+{
+    int               ret = 0;
+    int               sessionKey = 0;
+    CK_RV             rv;
+    Hkdf*             hkdf = info->kdf.hkdf.hkdf;
+    CK_KEY_TYPE       secretKeyType = CKK_GENERIC_SECRET;
+    CK_OBJECT_HANDLE  baseKey = CK_INVALID_HANDLE;
+    CK_OBJECT_HANDLE  derivedKey = CK_INVALID_HANDLE;
+    CK_MECHANISM      mech;
+    CK_HKDF_PARAMS    params;
+    CK_ULONG          derivedKeyLen;
+    int               mechType;
+    int               inKeyType;
+
+    /* Empty attribute for VALUE_LEN in case of expand operation */
+    CK_ATTRIBUTE      tmpl[] = {
+        { CKA_CLASS,       &secretKeyClass, sizeof(secretKeyClass) },
+        { CKA_KEY_TYPE,    &secretKeyType,  sizeof(secretKeyType)  },
+        { CKA_EXTRACTABLE, &ckTrue,         sizeof(ckTrue)         },
+        { 0,               NULL,            0                      },
+    };
+    CK_ULONG          tmplCnt = sizeof(tmpl) / sizeof(*tmpl) - 1;
+
+    /* Check operation is supported. */
+    ret = Pkcs11MechAvail(session, CKM_HKDF_DERIVE, NULL);
+
+    if (ret == 0)
+        ret = Pkcs11HmacTypes(info->kdf.hkdf.hashType, &mechType, &inKeyType);
+
+    if (ret == 0) {
+        WOLFSSL_MSG("PKCS#11: HKDF Key Derivation Operation");
+
+        /* Create a private key object or find by id. */
+        if ((hkdf->idLen == 0) && (hkdf->labelLen == 0) &&
+            (hkdf->key != NULL) && (hkdf->keyLen > 0)) {
+            sessionKey = 1;
+            ret = Pkcs11CreateSecretKey(&baseKey, session, CKK_HKDF,
+                                        (byte*)hkdf->key, hkdf->keyLen, NULL,
+                                        0, NULL, 0, CKA_DERIVE, 0);
+            if (ret == WC_NO_ERR_TRACE(WC_HW_E)) {
+                ret = Pkcs11CreateSecretKey(&baseKey, session,
+                                        CKK_GENERIC_SECRET, (byte*)hkdf->key,
+                                        hkdf->keyLen, NULL, 0, NULL, 0,
+                                        CKA_DERIVE, 0);
+            }
+        }
+
+        else if (hkdf->labelLen != 0) {
+    #ifdef WOLFSSL_PKCS11_EVIDEN_FIX
+            ret = Pkcs11FindKeyByLabel(&baseKey, CKO_SECRET_KEY, inKeyType,
+                                       session, hkdf->label, hkdf->labelLen);
+    #else
+            ret = Pkcs11FindKeyByLabel(&baseKey, CKO_SECRET_KEY, CKK_HKDF,
+                                       session, hkdf->label, hkdf->labelLen);
+            if (ret == WC_NO_ERR_TRACE(WC_HW_E)) {
+                ret = Pkcs11FindKeyByLabel(&baseKey, CKO_SECRET_KEY,
+                                           CKK_GENERIC_SECRET, session,
+                                           hkdf->label, hkdf->labelLen);
+            }
+    #endif
+        }
+        else if (hkdf->idLen != 0) {
+    #ifdef WOLFSSL_PKCS11_EVIDEN_FIX
+            ret = Pkcs11FindKeyById(&baseKey, CKO_SECRET_KEY, inKeyType,
+                                    session, hkdf->id, hkdf->idLen);
+    #else
+            ret = Pkcs11FindKeyById(&baseKey, CKO_SECRET_KEY, CKK_HKDF,
+                                    session, hkdf->id, hkdf->idLen);
+            if (ret == WC_NO_ERR_TRACE(WC_HW_E)) {
+                ret = Pkcs11FindKeyById(&baseKey, CKO_SECRET_KEY,
+                                        CKK_GENERIC_SECRET, session,
+                                        hkdf->id, hkdf->idLen);
+            }
+    #endif
+        }
+    }
+
+    if (ret == 0 && info->kdf.hkdf.expand) {
+        derivedKeyLen = info->kdf.hkdf.outSz;
+        tmpl[tmplCnt].type = CKA_VALUE_LEN;
+        tmpl[tmplCnt].pValue = &derivedKeyLen;
+        tmpl[tmplCnt].ulValueLen = sizeof(derivedKeyLen);
+        tmplCnt++;
+    }
+
+    if (ret == 0) {
+        /* Initialize HKDF operation */
+        mech.mechanism      = CKM_HKDF_DERIVE;
+        mech.ulParameterLen = sizeof(params);
+        mech.pParameter     = &params;
+
+        params.bExpand = info->kdf.hkdf.expand;
+        params.bExtract = info->kdf.hkdf.extract;
+        params.prfHashMechanism = mechType;
+        params.hSaltKey = CK_INVALID_HANDLE;
+        params.pInfo = (byte*)info->kdf.hkdf.info;
+        params.ulInfoLen = info->kdf.hkdf.infoSz;
+
+        if (info->kdf.hkdf.salt != NULL && info->kdf.hkdf.saltSz > 0) {
+            params.ulSaltType = CKF_HKDF_SALT_DATA;
+            params.pSalt = (byte*)info->kdf.hkdf.salt;
+            params.ulSaltLen = info->kdf.hkdf.saltSz;
+        }
+        else {
+            params.ulSaltType = CKF_HKDF_SALT_NULL;
+            params.pSalt = NULL;
+            params.ulSaltLen = 0;
+        }
+
+        PKCS11_DUMP_TEMPLATE("HKDF key", tmpl, tmplCnt);
+        rv = session->func->C_DeriveKey(session->handle, &mech, baseKey,
+                                        tmpl, tmplCnt, &derivedKey);
+        PKCS11_RV("C_DeriveKey", rv);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+        }
+    }
+
+    if (ret == 0) {
+        word32 outlen = info->kdf.hkdf.outSz;
+        ret = Pkcs11ExtractSecret(session, derivedKey, info->kdf.hkdf.out,
+                                  &outlen);
+        if (ret == 0 && outlen != info->kdf.hkdf.outSz) {
+            ret = WC_HW_E;
+        }
+    }
+
+    if (sessionKey)
+        session->func->C_DestroyObject(session->handle, baseKey);
+    if (derivedKey != CK_INVALID_HANDLE)
+        session->func->C_DestroyObject(session->handle, derivedKey);
+
+    return ret;
+}
+#endif /* HAVE_HKDF */
+#endif /* NO_HMAC */
 
 #ifndef WC_NO_RNG
 #ifndef HAVE_HASHDRBG
@@ -6941,6 +7134,21 @@ int wc_Pkcs11_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
     #else
             ret = NOT_COMPILED_IN;
     #endif
+        }
+        else if (info->algo_type == WC_ALGO_TYPE_KDF) {
+            switch (info->kdf.type) {
+    #if !defined(NO_HMAC) && defined(HAVE_HKDF)
+                case WC_KDF_TYPE_HKDF:
+                    ret = Pkcs11OpenSession(token, &session, readWrite);
+                    if (ret == 0) {
+                        ret = Pkcs11Hkdf(&session, info);
+                        Pkcs11CloseSession(token, &session);
+                    }
+                    break;
+    #endif
+                default:
+                    ret = NOT_COMPILED_IN;
+            }
         }
         else
             ret = NOT_COMPILED_IN;

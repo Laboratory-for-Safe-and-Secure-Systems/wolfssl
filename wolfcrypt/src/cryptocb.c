@@ -2042,31 +2042,98 @@ int wc_CryptoCb_DefaultDevID(void)
 }
 
 #if defined(HAVE_HKDF) && !defined(NO_HMAC)
-int wc_CryptoCb_Hkdf(int hashType, const byte* inKey, word32 inKeySz,
-                     const byte* salt, word32 saltSz, const byte* info,
-                     word32 infoSz, byte* out, word32 outSz, int devId)
+int wc_CryptoCb_HkdfExtract(Hkdf* hkdf, int type, const byte* salt,
+                            word32 saltSz, byte* out)
 {
-    int       ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
     CryptoCb* dev;
 
-    /* Find registered callback device */
-    dev = wc_CryptoCb_FindDevice(devId, WC_ALGO_TYPE_KDF);
+    if (hkdf == NULL)
+        return ret;
 
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(hkdf->devId, WC_ALGO_TYPE_KDF);
     if (dev && dev->cb) {
         wc_CryptoInfo cryptoInfo;
         XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_KDF;
+        cryptoInfo.kdf.type = WC_KDF_TYPE_HKDF;
+        cryptoInfo.kdf.hkdf.hkdf = hkdf;
+        cryptoInfo.kdf.hkdf.hashType = type;
+        cryptoInfo.kdf.hkdf.salt = salt;
+        cryptoInfo.kdf.hkdf.saltSz = saltSz;
+        cryptoInfo.kdf.hkdf.info = NULL;
+        cryptoInfo.kdf.hkdf.infoSz = 0;
+        cryptoInfo.kdf.hkdf.out = out;
+        cryptoInfo.kdf.hkdf.outSz = wc_HashGetDigestSize(type);
+        cryptoInfo.kdf.hkdf.extract = 1;
+        cryptoInfo.kdf.hkdf.expand = 0;
 
-        cryptoInfo.algo_type         = WC_ALGO_TYPE_KDF;
-        cryptoInfo.kdf.type          = WC_KDF_TYPE_HKDF;
-        cryptoInfo.kdf.hkdf.hashType = hashType;
-        cryptoInfo.kdf.hkdf.inKey    = inKey;
-        cryptoInfo.kdf.hkdf.inKeySz  = inKeySz;
-        cryptoInfo.kdf.hkdf.salt     = salt;
-        cryptoInfo.kdf.hkdf.saltSz   = saltSz;
-        cryptoInfo.kdf.hkdf.info     = info;
-        cryptoInfo.kdf.hkdf.infoSz   = infoSz;
-        cryptoInfo.kdf.hkdf.out      = out;
-        cryptoInfo.kdf.hkdf.outSz    = outSz;
+        ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
+    }
+
+    return wc_CryptoCb_TranslateErrorCode(ret);
+}
+
+int wc_CryptoCb_HkdfExpand(Hkdf* hkdf, int type, const byte* info,
+                           word32 infoSz, byte* out, word32 outSz)
+{
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    CryptoCb* dev;
+
+    if (hkdf == NULL)
+        return ret;
+
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(hkdf->devId, WC_ALGO_TYPE_KDF);
+    if (dev && dev->cb) {
+        wc_CryptoInfo cryptoInfo;
+        XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_KDF;
+        cryptoInfo.kdf.type = WC_KDF_TYPE_HKDF;
+        cryptoInfo.kdf.hkdf.hkdf = hkdf;
+        cryptoInfo.kdf.hkdf.hashType = type;
+        cryptoInfo.kdf.hkdf.salt = NULL;
+        cryptoInfo.kdf.hkdf.saltSz = 0;
+        cryptoInfo.kdf.hkdf.info = info;
+        cryptoInfo.kdf.hkdf.infoSz = infoSz;
+        cryptoInfo.kdf.hkdf.out = out;
+        cryptoInfo.kdf.hkdf.outSz = outSz;
+        cryptoInfo.kdf.hkdf.extract = 0;
+        cryptoInfo.kdf.hkdf.expand = 1;
+
+        ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
+    }
+
+    return wc_CryptoCb_TranslateErrorCode(ret);
+}
+
+int wc_CryptoCb_Hkdf(Hkdf* hkdf, int type, const byte* salt, word32 saltSz,
+                     const byte* info, word32 infoSz, byte* out, word32 outSz)
+{
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    CryptoCb* dev;
+
+    if (hkdf == NULL)
+        return ret;
+
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(hkdf->devId, WC_ALGO_TYPE_KDF);
+    if (dev && dev->cb) {
+        wc_CryptoInfo cryptoInfo;
+        XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_KDF;
+        cryptoInfo.kdf.type = WC_KDF_TYPE_HKDF;
+        cryptoInfo.kdf.hkdf.hkdf = hkdf;
+        cryptoInfo.kdf.hkdf.hashType = type;
+        cryptoInfo.kdf.hkdf.salt = salt;
+        cryptoInfo.kdf.hkdf.saltSz = saltSz;
+        cryptoInfo.kdf.hkdf.info = info;
+        cryptoInfo.kdf.hkdf.infoSz = infoSz;
+        cryptoInfo.kdf.hkdf.out = out;
+        cryptoInfo.kdf.hkdf.outSz = outSz;
+        cryptoInfo.kdf.hkdf.extract = 1;
+        cryptoInfo.kdf.hkdf.expand = 1;
 
         ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
     }

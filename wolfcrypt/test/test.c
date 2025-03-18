@@ -62285,7 +62285,7 @@ static int myCryptoDevCb(int devIdArg, wc_CryptoInfo* info, void* ctx)
         #if !defined(HAVE_SELFTEST) && \
            (!defined(HAVE_FIPS) || FIPS_VERSION_GE(7,0))
             ret = wc_HKDF_ex(info->kdf.hkdf.hashType,
-                           info->kdf.hkdf.inKey, info->kdf.hkdf.inKeySz,
+                           info->kdf.hkdf.hkdf->key, info->kdf.hkdf.hkdf->keyLen,
                            info->kdf.hkdf.salt, info->kdf.hkdf.saltSz,
                            info->kdf.hkdf.info, info->kdf.hkdf.infoSz,
                            info->kdf.hkdf.out, info->kdf.hkdf.outSz,
