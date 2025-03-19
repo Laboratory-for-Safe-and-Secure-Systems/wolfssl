@@ -1359,6 +1359,11 @@ enum {
     #endif
 #endif
 
+#ifndef MAX_PSK_CTX_LEN
+    /* maximum psk importer context size */
+    #define MAX_PSK_CTX_LEN 128
+#endif
+
 #ifndef MAX_PSK_KEY_LEN
     #define MAX_PSK_KEY_LEN 64
 #endif
@@ -3673,8 +3678,8 @@ WOLFSSL_LOCAL int TLSX_CKS_Parse(WOLFSSL* ssl, byte* input, word16 length);
 WOLFSSL_LOCAL int TLSX_UseCKS(TLSX** extensions, WOLFSSL* ssl, void* heap);
 WOLFSSL_LOCAL int TLSX_CKS_Set(WOLFSSL* ssl, TLSX** extensions);
 #endif
-#if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
 
+#if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
 enum PskDecryptReturn {
     PSK_DECRYPT_NONE = 0,
     PSK_DECRYPT_OK,
@@ -3715,6 +3720,9 @@ typedef struct PreSharedKey {
     byte                 resumption:1;            /* Resumption PSK     */
     byte                 chosen:1;                /* Server's choice    */
     byte                 decryptRet:3;            /* Ticket decrypt return */
+#if defined(WOLFSSL_TLS13) && defined(WOLFSSL_EXTERNAL_PSK_IMPORTER)
+    byte                 imported:1;              /* PSK is imported    */
+#endif
     struct PreSharedKey* next;                    /* List pointer       */
 } PreSharedKey;
 
@@ -3749,6 +3757,15 @@ WOLFSSL_LOCAL int TLSX_PskKeyModes_Parse_Modes(const byte* input, word16 length,
 
 #ifdef WOLFSSL_EARLY_DATA
 WOLFSSL_LOCAL int TLSX_EarlyData_Use(WOLFSSL* ssl, word32 max, int is_response);
+#endif
+
+#ifdef WOLFSSL_EXTERNAL_PSK_IMPORTER
+WOLFSSL_LOCAL int TLSX_PreSharedKey_CreateImportedIdentity(const byte* id,
+        word16 id_len, const byte* ctx, word16 ctx_len, byte hmac,
+        ProtocolVersion protocol, byte* output, word16* out_len);
+WOLFSSL_LOCAL int TLSX_PreSharedKey_ParseImportedIdentity(byte* input,
+        word16 length, byte** id, word16* id_len, byte** ctx,word16* ctx_len,
+        byte* hkdf, ProtocolVersion* protocol);
 #endif
 
 #if defined(WOLFSSL_CERT_WITH_EXTERN_PSK) && defined(WOLFSSL_TLS13)
@@ -4058,7 +4075,11 @@ struct WOLFSSL_CTX {
     wc_psk_client_cs_callback    client_psk_cs_cb;     /* client callback */
     wc_psk_client_tls13_callback client_psk_tls13_cb;  /* client callback */
     wc_psk_server_tls13_callback server_psk_tls13_cb;  /* server callback */
+#ifdef WOLFSSL_EXTERNAL_PSK_IMPORTER
+    wc_psk_client_importer_callback client_psk_importer_cb;
+    wc_psk_server_importer_callback server_psk_importer_cb;
 #endif
+#endif /* WOLFSSL_TLS13 */
     void*       psk_ctx;
     char        server_hint[MAX_PSK_ID_LEN + NULL_TERM_LEN];
 #endif /* HAVE_SESSION_TICKET || !NO_PSK */
@@ -4969,7 +4990,11 @@ struct Options {
     wc_psk_client_cs_callback    client_psk_cs_cb;     /* client callback */
     wc_psk_client_tls13_callback client_psk_tls13_cb;  /* client callback */
     wc_psk_server_tls13_callback server_psk_tls13_cb;  /* server callback */
+#ifdef WOLFSSL_EXTERNAL_PSK_IMPORTER
+    wc_psk_client_importer_callback client_psk_importer_cb;
+    wc_psk_server_importer_callback server_psk_importer_cb;
 #endif
+#endif /* WOLFSSL_TLS13 */
     void*             psk_ctx;
 #endif /* NO_PSK */
     unsigned long     mask; /* store SSL_OP_ flags */
@@ -5221,7 +5246,15 @@ typedef struct Arrays {
     char            client_identity[MAX_PSK_ID_LEN + NULL_TERM_LEN];
     char            server_hint[MAX_PSK_ID_LEN + NULL_TERM_LEN];
     byte            psk_key[MAX_PSK_KEY_LEN];
-#endif
+#if defined(WOLFSSL_TLS13) && defined(WOLFSSL_EXTERNAL_PSK_IMPORTER) 
+    byte            psk_externalKeyPreExtracted:1;
+#if defined(WOLF_PRIVATE_KEY_ID)
+    byte            psk_externalKeyId:1;
+    byte            psk_externalKeyLabel:1;
+    int             psk_externalKeyDevId;
+#endif /* WOLF_PRIVATE_KEY_ID */
+#endif /* WOLFSSL_TLS13 && WOLFSSL_EXTERNAL_PSK_IMPORTER */
+#endif /* HAVE_SESSION_TICKET || !NO_PSK */
     byte            clientRandom[RAN_LEN];
 #if defined(WOLFSSL_TLS13) && defined(HAVE_ECH)
     byte            clientRandomInner[RAN_LEN];
