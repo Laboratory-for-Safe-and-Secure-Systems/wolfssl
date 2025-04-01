@@ -82,7 +82,8 @@
     !defined(WOLFSSL_STATIC_MEMORY)
 
 #define DO_MEM_STATS
-#if (defined(__linux__) && !defined(WOLFSSL_LINUXKM)) || defined(__MACH__)
+#if (defined(__linux__) && !defined(WOLFSSL_LINUXKM)) || defined(__MACH__) || \
+    defined(__ZEPHYR__)
     #define DO_MEM_LIST
 #endif
 
