@@ -37457,6 +37457,14 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         }
 #endif
 
+
+#if !defined(NO_PSK)
+        /* In this case no keyshare extension is sent from the client and we 
+         * can exit the verification successful. */
+        if(havePSK && ssl->options.noPskDheKe)
+            return 1;
+#endif
+
 #ifdef WOLFSSL_TLS13
         if (IsAtLeastTLSv1_3(ssl->version) &&
                                       ssl->options.side == WOLFSSL_SERVER_END) {
@@ -37611,8 +37619,11 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 #endif
 
 #if defined(WOLFSSL_TLS13) && defined(HAVE_SUPPORTED_CURVES)
-        if (IsAtLeastTLSv1_3(ssl->version) &&
-                                      ssl->options.side == WOLFSSL_SERVER_END) {
+        if (IsAtLeastTLSv1_3(ssl->version) && (ssl->options.side == WOLFSSL_SERVER_END) 
+#if !defined(NO_PSK)
+            && !ssl->options.noPskDheKe
+#endif
+        ) {
             ret = TLSX_KeyShare_Setup(ssl, cs.clientKSE);
             if (ret != 0)
                 return ret;
