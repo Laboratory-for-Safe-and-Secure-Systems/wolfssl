@@ -2274,9 +2274,9 @@ WOLFSSL_LOCAL int wolfssl_priv_der_blind(WC_RNG* rng, DerBuffer* key,
     DerBuffer** mask);
 WOLFSSL_LOCAL void wolfssl_priv_der_unblind(DerBuffer* key, DerBuffer* mask);
 #endif
-WOLFSSL_LOCAL int  DecodePrivateKey(WOLFSSL *ssl, word32* length);
+WOLFSSL_LOCAL int  DecodePrivateKey(WOLFSSL *ssl, word32* sigLen);
 #ifdef WOLFSSL_DUAL_ALG_CERTS
-WOLFSSL_LOCAL int  DecodeAltPrivateKey(WOLFSSL *ssl, word32* length);
+WOLFSSL_LOCAL int  DecodeAltPrivateKey(WOLFSSL *ssl, word32* sigLen);
 #endif
 #if defined(WOLF_PRIVATE_KEY_ID) || defined(HAVE_PK_CALLBACKS)
 WOLFSSL_LOCAL int GetPrivateKeySigSize(WOLFSSL* ssl);
