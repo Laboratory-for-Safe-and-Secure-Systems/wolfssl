@@ -9466,7 +9466,7 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 /* The native was already decoded. Now we need to do the
                  * alternative. Note that no swap was done because this case is
                  * both native and alternative, not just alternative. */
-                if (ssl->ctx->altPrivateKey == NULL) {
+                if (ssl->buffers.altKey == NULL) {
                     ERROR_OUT(NO_PRIVATE_KEY, exit_scv);
                 }
 
