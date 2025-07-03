@@ -1220,8 +1220,9 @@ enum wc_AlgoType {
     WC_ALGO_TYPE_HMAC = 6,
     WC_ALGO_TYPE_CMAC = 7,
     WC_ALGO_TYPE_CERT = 8,
+    WC_ALGO_TYPE_CA_CERTS = 9,
 
-    WC_ALGO_TYPE_MAX = WC_ALGO_TYPE_CERT
+    WC_ALGO_TYPE_MAX = WC_ALGO_TYPE_CA_CERTS
 };
 
 /* hash types */
