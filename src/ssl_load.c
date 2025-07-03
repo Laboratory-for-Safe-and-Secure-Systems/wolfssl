@@ -4444,6 +4444,62 @@ int wolfSSL_CTX_use_certificate_chain_id(WOLFSSL_CTX* ctx,
                                           id, idLen, devId);
 }
 
+/* Load all available CA certificates from the device.
+ *
+ * @param [in, out] ctx    SSL context object.
+ * @param [in]      devId  Device identifier.
+ * @return  1 on success.
+ * @return  0 on failure.
+ */
+int wolfSSL_CTX_load_verify_dev(WOLFSSL_CTX* ctx, int devId)
+{
+    int ret;
+    word32 i;
+    byte **certData = NULL;
+    word32 *certDataLen = NULL;
+    int *certFormat = NULL;
+    word32 certCount = 0;
+
+    WOLFSSL_ENTER("wolfSSL_CTX_load_verify_dev");
+
+    if (ctx == NULL) {
+        return WOLFSSL_FAILURE;
+    }
+
+    ret = wc_CryptoCb_GetCaCerts(devId, &certData, &certDataLen,
+                                 &certFormat, &certCount, ctx->heap);
+    if (ret != 0) {
+        ret = WOLFSSL_FAILURE;
+        goto exit;
+    }
+
+    WOLFSSL_MSG_EX("Loading %d CA certs from device %d", certCount, devId);
+
+    for (i = 0; i < certCount; ++i) {
+        if (certData[i] != NULL && certDataLen[i] > 0) {
+            /* Load the CA certificate. */
+            ret = wolfSSL_CTX_load_verify_buffer_ex(ctx, certData[i],
+                                certDataLen[i], certFormat[i], 0,
+                                WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS);
+            if (ret != 1) {
+                WOLFSSL_MSG_EX("Ignoring CA cert %d/%d due to error %d",
+                               i+1, certCount, ret);
+            }
+        }
+    }
+
+exit:
+    if (certData != NULL) {
+        for (i = 0; i < certCount; ++i) {
+            XFREE(certData[i], ctx->heap, DYNAMIC_TYPE_CERT);
+        }
+    }
+    XFREE(certData, ctx->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(certDataLen, ctx->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(certFormat, ctx->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    return ret;
+}
+
 #endif /* if defined(WOLF_CRYPTO_CB) && !defined(NO_CERTS) */
 
 /* Load a certificate chain in a buffer into SSL context.

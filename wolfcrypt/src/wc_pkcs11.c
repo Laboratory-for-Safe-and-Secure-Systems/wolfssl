@@ -124,7 +124,9 @@ typedef struct CK_AES_CTR_PARAMS {
 } CK_AES_CTR_PARAMS;
 #endif
 
+#if !defined(NO_CERTS)
 static CK_OBJECT_CLASS certClass  = CKO_CERTIFICATE;
+#endif
 
 #ifdef WOLFSSL_DEBUG_PKCS11
 /* Enable logging of PKCS#11 calls and return value. */
@@ -2621,6 +2623,91 @@ static int Pkcs11FindKeyById(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
 }
 #endif
 
+#if !defined(NO_CERTS)
+/**
+ * Find all PKCS#11 objects matching the template.
+ *
+ * @param  [out]  objects      Pointer to the array of found object handles.
+ * @param  [in]   session      Session object.
+ * @param  [in]   template     PKCS #11 template to use in search.
+ * @param  [in]   tmplCnt      Count of entries in PKCS #11 template.
+ * @param  [in]   heap         Heap to use for memory allocation.
+ * @param  [out]  count        Number of objects found.
+ * @return  WC_HW_E when a PKCS#11 library call fails.
+ * @return  0 on success.
+ */
+static int Pkcs11FindObjectsByTemplate(CK_OBJECT_HANDLE** objects,
+                                       Pkcs11Session* session,
+                                       CK_ATTRIBUTE *template,
+                                       CK_ULONG tmplCnt,
+                                       void* heap,
+                                       CK_ULONG *count)
+{
+    int             ret = 0;
+    CK_RV           rv;
+    CK_ULONG        chunkSize = 10;
+    CK_ULONG        chunkFound = 0;
+
+    WOLFSSL_MSG("PKCS#11: Find Objects By Template");
+
+    PKCS11_DUMP_TEMPLATE("Find Objects", template, tmplCnt);
+    rv = session->func->C_FindObjectsInit(session->handle, template, tmplCnt);
+    PKCS11_RV("C_FindObjectsInit", rv);
+    if (rv != CKR_OK) {
+        ret = WC_HW_E;
+    }
+    if (ret == 0) {
+        /* As we cannot obtain the final number of objects we may find, we have
+         * search in chunks, until we find no more. */
+        *count = 0;
+
+        do {
+            /* Increase the handle buffer by a chunk */
+            int newSize = (*count + chunkSize) * sizeof(CK_OBJECT_HANDLE);
+            CK_OBJECT_HANDLE* newBuffer = NULL;
+            newBuffer = (CK_OBJECT_HANDLE*)XREALLOC(*objects, newSize, heap,
+                                                    DYNAMIC_TYPE_TMP_BUFFER);
+            if (newBuffer != NULL) {
+                *objects = newBuffer;
+            }
+            else {
+                WOLFSSL_MSG("PKCS#11: Failed to allocate memory for objects");
+                ret = MEMORY_E;
+                break;
+            }
+
+            /* Continue the search for the next chunk */
+            rv = session->func->C_FindObjects(session->handle, *objects + *count,
+                                              chunkSize, &chunkFound);
+            PKCS11_RV("C_FindObjects", rv);
+            PKCS11_VAL("C_FindObjects Count", chunkFound);
+            if (rv != CKR_OK) {
+                ret = WC_HW_E;
+                break;
+            }
+            *count += chunkFound;
+        }
+        while (ret == 0 && chunkFound == chunkSize);
+
+        rv = session->func->C_FindObjectsFinal(session->handle);
+        PKCS11_RV("C_FindObjectsFinal", rv);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+        }
+    }
+
+    if (ret != 0) {
+        /* If we failed, free the allocated memory for objects. */
+        if (*objects != NULL) {
+            XFREE(*objects, heap, DYNAMIC_TYPE_TMP_BUFFER);
+            *objects = NULL;
+        }
+    }
+
+    return ret;
+}
+#endif
+
 #ifndef NO_RSA
 /**
  * Find the PKCS#11 object containing the RSA public or private key data with
@@ -3530,7 +3617,6 @@ static int Pkcs11FindEccKey(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
     int             i = 0;
     unsigned char*  ecPoint = NULL;
     word32          len = 0;
-    CK_RV           rv;
     CK_ULONG        count;
     CK_UTF8CHAR     params[ECC_MAX_OID_LEN];
     CK_ATTRIBUTE    keyTemplate[] = {
@@ -3568,26 +3654,7 @@ static int Pkcs11FindEccKey(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
         attrCnt++;
     }
     if (ret == 0) {
-        PKCS11_DUMP_TEMPLATE("Find Ec Key", keyTemplate, attrCnt);
-        rv = session->func->C_FindObjectsInit(session->handle, keyTemplate,
-                                                                       attrCnt);
-        PKCS11_RV("C_FindObjectsInit", rv);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-    }
-    if (ret == 0) {
-        rv = session->func->C_FindObjects(session->handle, key, 1, &count);
-        PKCS11_RV("C_FindObjects", rv);
-        PKCS11_VAL("C_FindObjects Count", count);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-        rv = session->func->C_FindObjectsFinal(session->handle);
-        PKCS11_RV("C_FindObjectsFinal", rv);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
+        ret = Pkcs11FindKeyByTemplate(key, session, keyTemplate, attrCnt, &count);
     }
 
     XFREE(ecPoint, eccKey->heap, DYNAMIC_TYPE_ECC);
@@ -4571,7 +4638,6 @@ static int Pkcs11FindMlKemKey(CK_OBJECT_HANDLE* handle,
                               MlKemKey* key)
 {
     int             ret = 0;
-    CK_RV           rv;
     CK_ULONG        count;
     CK_ATTRIBUTE    keyTemplate[] = {
         { CKA_CLASS,        &keyClass,      sizeof(keyClass)     },
@@ -4581,28 +4647,7 @@ static int Pkcs11FindMlKemKey(CK_OBJECT_HANDLE* handle,
 
     (void) key;
 
-    if (ret == 0) {
-        PKCS11_DUMP_TEMPLATE("Find ML-KEM Key", keyTemplate, attrCnt);
-        rv = session->func->C_FindObjectsInit(session->handle, keyTemplate,
-                                              attrCnt);
-        PKCS11_RV("C_FindObjectsInit", rv);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-    }
-    if (ret == 0) {
-        rv = session->func->C_FindObjects(session->handle, handle, 1, &count);
-        PKCS11_RV("C_FindObjects", rv);
-        PKCS11_VAL("C_FindObjects Count", count);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-        rv = session->func->C_FindObjectsFinal(session->handle);
-        PKCS11_RV("C_FindObjectsFinal", rv);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-    }
+    ret = Pkcs11FindKeyByTemplate(handle, session, keyTemplate, attrCnt, &count);
 
     return ret;
 }
@@ -6486,6 +6531,126 @@ exit:
     return ret;
 }
 
+static int Pkcs11GetCaCerts(Pkcs11Session* session, wc_CryptoInfo* info)
+{
+    int                     ret = 0;
+    int                     i;
+    CK_RV                   rv  = 0;
+    CK_ULONG                count = 0;
+    CK_OBJECT_HANDLE        *certHandles = NULL;
+    CK_CERTIFICATE_TYPE     certType = CKC_X_509;
+    CK_BBOOL                trustedCert = CK_TRUE;
+    CK_CERTIFICATE_CATEGORY certCategory = CK_CERTIFICATE_CATEGORY_AUTHORITY;
+
+    CK_ATTRIBUTE certTemplate[] = {
+        { CKA_CLASS,                &certClass, sizeof(certClass)       },
+        { CKA_CERTIFICATE_TYPE,     &certType,     sizeof(certType)     },
+        { CKA_TRUSTED,              &trustedCert,  sizeof(trustedCert)  },
+        { CKA_CERTIFICATE_CATEGORY, &certCategory, sizeof(certCategory) },
+    };
+    CK_ULONG certTmplCnt = sizeof(certTemplate) / sizeof(*certTemplate) - 1;
+
+    WOLFSSL_MSG("PKCS#11: Retrieve CA certificates");
+
+    ret = Pkcs11FindObjectsByTemplate(&certHandles, session, certTemplate,
+                                      certTmplCnt, info->ca_certs.heap, &count);
+    if (ret == 0 && count == 0) {
+        ret = WC_HW_E;
+        goto exit;
+    }
+
+    /* Allocate array of byte* to store all buffers, sizes and formats */
+    *info->ca_certs.certDataOut = (byte**)XMALLOC(count * sizeof(byte*),
+                                                  info->ca_certs.heap,
+                                                  DYNAMIC_TYPE_TMP_BUFFER);
+    if (*info->ca_certs.certDataOut == NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+    XMEMSET(*info->ca_certs.certDataOut, 0, count * sizeof(byte*));
+
+    *info->ca_certs.certSzOut = (word32*)XMALLOC(count * sizeof(word32),
+                                                 info->ca_certs.heap,
+                                                 DYNAMIC_TYPE_TMP_BUFFER);
+    if (*info->ca_certs.certSzOut == NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+
+    *info->ca_certs.certFormatOut = (int*)XMALLOC(count * sizeof(int),
+                                                  info->ca_certs.heap,
+                                                  DYNAMIC_TYPE_TMP_BUFFER);
+    if (*info->ca_certs.certFormatOut == NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+
+    for (i = 0; i < (int)count; ++i) {
+        CK_ATTRIBUTE tmpl[] = {
+            { CKA_VALUE,         NULL_PTR, 0 }
+        };
+        CK_ULONG tmplCnt = sizeof(tmpl) / sizeof(*tmpl);
+        byte     *certData = NULL;
+
+        PKCS11_DUMP_TEMPLATE("Get Certificate Length", tmpl, tmplCnt);
+        rv = session->func->C_GetAttributeValue(session->handle, certHandles[i],
+                                                tmpl, tmplCnt);
+        PKCS11_RV("C_GetAttributeValue", rv);
+        if ((rv != CKR_OK) || (tmpl[0].ulValueLen == 0)) {
+            ret = WC_HW_E;
+            goto exit;
+        }
+
+        certData = (byte*)XMALLOC((int)tmpl[0].ulValueLen, info->ca_certs.heap,
+                                  DYNAMIC_TYPE_CERT);
+        if (certData == NULL) {
+            ret = MEMORY_E;
+            goto exit;
+        }
+
+        (*info->ca_certs.certDataOut)[i] = certData;
+        (*info->ca_certs.certSzOut)[i] = (word32)tmpl[0].ulValueLen;
+        (*info->ca_certs.certFormatOut)[i] = CTC_FILETYPE_ASN1;
+
+        tmpl[0].pValue = certData;
+        rv = session->func->C_GetAttributeValue(session->handle, certHandles[i],
+                                                tmpl, tmplCnt);
+        PKCS11_RV("C_GetAttributeValue", rv);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+            goto exit;
+        }
+
+        certData = NULL;
+    }
+
+    *info->ca_certs.certCount = count;
+
+exit:
+    if (ret != 0) {
+        /* Free certificates */
+        if (*info->ca_certs.certDataOut != NULL) {
+            for (i = 0; i < (int)count; ++i) {
+                XFREE((*info->ca_certs.certDataOut)[i], info->ca_certs.heap,
+                      DYNAMIC_TYPE_CERT);
+            }
+        }
+        XFREE(*info->ca_certs.certDataOut, info->ca_certs.heap,
+              DYNAMIC_TYPE_TMP_BUFFER);
+        XFREE(*info->ca_certs.certSzOut, info->ca_certs.heap,
+              DYNAMIC_TYPE_TMP_BUFFER);
+        XFREE(*info->ca_certs.certFormatOut, info->ca_certs.heap,
+              DYNAMIC_TYPE_TMP_BUFFER);
+
+        *info->ca_certs.certDataOut = NULL;
+        *info->ca_certs.certSzOut = NULL;
+        *info->ca_certs.certFormatOut = NULL;
+        *info->ca_certs.certCount = 0;
+    }
+    XFREE(certHandles, info->ca_certs.heap, DYNAMIC_TYPE_TMP_BUFFER);
+    return ret;
+}
+
 #endif /* !NO_CERTS */
 
 /**
@@ -6760,6 +6925,17 @@ int wc_Pkcs11_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
             ret = Pkcs11OpenSession(token, &session, readWrite);
             if (ret == 0) {
                 ret = Pkcs11GetCert(&session, info);
+                Pkcs11CloseSession(token, &session);
+            }
+    #else
+            ret = NOT_COMPILED_IN;
+    #endif
+        }
+        else if (info->algo_type == WC_ALGO_TYPE_CA_CERTS) {
+    #ifndef NO_CERTS
+            ret = Pkcs11OpenSession(token, &session, readWrite);
+            if (ret == 0) {
+                ret = Pkcs11GetCaCerts(&session, info);
                 Pkcs11CloseSession(token, &session);
             }
     #else

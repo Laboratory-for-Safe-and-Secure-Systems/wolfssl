@@ -1949,6 +1949,31 @@ int wc_CryptoCb_GetCert(int devId, const char *label, word32 labelLen,
 
     return wc_CryptoCb_TranslateErrorCode(ret);
 }
+
+int wc_CryptoCb_GetCaCerts(int devId, byte*** out, word32** outSz,
+                           int **format, word32* count, void *heap)
+{
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
+    CryptoCb* dev;
+
+    /* locate registered callback */
+    dev = wc_CryptoCb_FindDevice(devId, WC_ALGO_TYPE_CA_CERTS);
+    if (dev && dev->cb) {
+        wc_CryptoInfo cryptoInfo;
+        XMEMSET(&cryptoInfo, 0, sizeof(cryptoInfo));
+        cryptoInfo.algo_type = WC_ALGO_TYPE_CA_CERTS;
+        cryptoInfo.ca_certs.heap = heap;
+        cryptoInfo.ca_certs.certDataOut = out;
+        cryptoInfo.ca_certs.certSzOut = outSz;
+        cryptoInfo.ca_certs.certFormatOut = format;
+        cryptoInfo.ca_certs.certCount = count;
+        cryptoInfo.ca_certs.heap = heap;
+
+        ret = dev->cb(dev->devId, &cryptoInfo, dev->ctx);
+    }
+
+    return wc_CryptoCb_TranslateErrorCode(ret);
+}
 #endif /* ifndef NO_CERTS */
 
 #if defined(WOLFSSL_CMAC)
