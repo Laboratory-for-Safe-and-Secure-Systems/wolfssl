@@ -2147,6 +2147,213 @@ static int Pkcs11HmacTypes(int macType, int* mechType, int* keyType)
 }
 #endif
 
+#if !defined(NO_RSA) || defined(HAVE_ECC) || (!defined(NO_AES) && \
+           (defined(HAVE_AESGCM) || defined(HAVE_AES_CBC))) || \
+           !defined(NO_HMAC) || !defined(NO_CERTS)
+
+/**
+ * Find the PKCS#11 object containing key data using template.
+ *
+ * @param  [out]  key          Handle to key object.
+ * @param  [in]   session      Session object.
+ * @param  [in]   keyTemplate  PKCS #11 template to use in search.
+ * @param  [in]   keyTmplCnt   Count of entries in PKCS #11 template.
+ * @param  [out]  count        Number of keys matching template.
+ * @return  WC_HW_E when a PKCS#11 library call fails.
+ * @return  0 on success.
+ */
+static int Pkcs11FindKeyByTemplate(CK_OBJECT_HANDLE* key,
+                                   Pkcs11Session* session,
+                                   CK_ATTRIBUTE *keyTemplate,
+                                   CK_ULONG keyTmplCnt,
+                                   CK_ULONG *count)
+{
+    int             ret = 0;
+    CK_RV           rv;
+
+    WOLFSSL_MSG("PKCS#11: Find Key By Template");
+
+    PKCS11_DUMP_TEMPLATE("Find Key", keyTemplate, keyTmplCnt);
+    rv = session->func->C_FindObjectsInit(session->handle, keyTemplate,
+                                                                    keyTmplCnt);
+    PKCS11_RV("C_FindObjectsInit", rv);
+    if (rv != CKR_OK) {
+        ret = WC_HW_E;
+    }
+    if (ret == 0) {
+        rv = session->func->C_FindObjects(session->handle, key, 1, count);
+        PKCS11_RV("C_FindObjects", rv);
+        PKCS11_VAL("C_FindObjects Count", *count);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+        }
+        rv = session->func->C_FindObjectsFinal(session->handle);
+        PKCS11_RV("C_FindObjectsFinal", rv);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+        }
+    }
+    return ret;
+}
+
+/**
+ * Find the PKCS#11 object containing the private key data by label.
+ *
+ * @param  [out]  key       Handle to key object.
+ * @param  [in]   keyClass  Public or private key class.
+ * @param  [in]   keyType   Type of key.
+ * @param  [in]   session   Session object.
+ * @param  [in]   id        Identifier set against a key.
+ * @param  [in]   idLen     Length of identifier.
+ * @return  WC_HW_E when a PKCS#11 library call fails.
+ * @return  0 on success.
+ */
+static int Pkcs11FindKeyByLabel(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
+                                CK_KEY_TYPE keyType, Pkcs11Session* session,
+                                char* label, int labelLen)
+{
+    int             ret = 0;
+    CK_ULONG        count;
+    CK_ATTRIBUTE    keyTemplate[] = {
+        { CKA_CLASS,           &keyClass, sizeof(keyClass)   },
+        { CKA_KEY_TYPE,        &keyType,  sizeof(keyType)    },
+        { CKA_LABEL,           label,     (CK_ULONG)labelLen }
+    };
+    CK_ULONG        keyTmplCnt = sizeof(keyTemplate) / sizeof(*keyTemplate);
+
+    WOLFSSL_MSG("PKCS#11: Find Key By Label");
+
+    ret = Pkcs11FindKeyByTemplate(key, session, keyTemplate, keyTmplCnt,
+                                                                        &count);
+    if (ret == 0 && count == 0)
+        ret = WC_HW_E;
+
+    return ret;
+}
+
+/**
+ * Find the PKCS#11 object containing the private key data by ID.
+ *
+ * @param  [out]  key       Handle to key object.
+ * @param  [in]   keyClass  Public or private key class.
+ * @param  [in]   keyType   Type of key.
+ * @param  [in]   session   Session object.
+ * @param  [in]   id        Identifier set against a key.
+ * @param  [in]   idLen     Length of identifier.
+ * @return  WC_HW_E when a PKCS#11 library call fails.
+ * @return  0 on success.
+ */
+static int Pkcs11FindKeyById(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
+                             CK_KEY_TYPE keyType, Pkcs11Session* session,
+                             byte* id, int idLen)
+{
+    int             ret = 0;
+    CK_ULONG        count;
+    CK_ATTRIBUTE    keyTemplate[] = {
+#ifndef WC_PKCS11_FIND_WITH_ID_ONLY
+        { CKA_CLASS,           &keyClass, sizeof(keyClass) },
+        { CKA_KEY_TYPE,        &keyType,  sizeof(keyType)  },
+#endif
+        { CKA_ID,              id,        (CK_ULONG)idLen  }
+    };
+    CK_ULONG        keyTmplCnt = sizeof(keyTemplate) / sizeof(*keyTemplate);
+
+    WOLFSSL_MSG("PKCS#11: Find Key By Id");
+
+    ret = Pkcs11FindKeyByTemplate(key, session, keyTemplate, keyTmplCnt,
+                                                                        &count);
+    if (ret == 0 && count == 0)
+        ret = WC_HW_E;
+
+    return ret;
+}
+#endif
+
+#if !defined(NO_CERTS)
+/**
+ * Find all PKCS#11 objects matching the template.
+ *
+ * @param  [out]  objects      Pointer to the array of found object handles.
+ * @param  [in]   session      Session object.
+ * @param  [in]   template     PKCS #11 template to use in search.
+ * @param  [in]   tmplCnt      Count of entries in PKCS #11 template.
+ * @param  [in]   heap         Heap to use for memory allocation.
+ * @param  [out]  count        Number of objects found.
+ * @return  WC_HW_E when a PKCS#11 library call fails.
+ * @return  0 on success.
+ */
+static int Pkcs11FindObjectsByTemplate(CK_OBJECT_HANDLE** objects,
+                                       Pkcs11Session* session,
+                                       CK_ATTRIBUTE *template,
+                                       CK_ULONG tmplCnt,
+                                       void* heap,
+                                       CK_ULONG *count)
+{
+    int             ret = 0;
+    CK_RV           rv;
+    CK_ULONG        chunkSize = 10;
+    CK_ULONG        chunkFound = 0;
+
+    WOLFSSL_MSG("PKCS#11: Find Objects By Template");
+
+    PKCS11_DUMP_TEMPLATE("Find Objects", template, tmplCnt);
+    rv = session->func->C_FindObjectsInit(session->handle, template, tmplCnt);
+    PKCS11_RV("C_FindObjectsInit", rv);
+    if (rv != CKR_OK) {
+        ret = WC_HW_E;
+    }
+    if (ret == 0) {
+        /* As we cannot obtain the final number of objects we may find, we have
+         * search in chunks, until we find no more. */
+        *count = 0;
+
+        do {
+            /* Increase the handle buffer by a chunk */
+            int newSize = (*count + chunkSize) * sizeof(CK_OBJECT_HANDLE);
+            CK_OBJECT_HANDLE* newBuffer = NULL;
+            newBuffer = (CK_OBJECT_HANDLE*)XREALLOC(*objects, newSize, heap,
+                                                    DYNAMIC_TYPE_TMP_BUFFER);
+            if (newBuffer != NULL) {
+                *objects = newBuffer;
+            }
+            else {
+                WOLFSSL_MSG("PKCS#11: Failed to allocate memory for objects");
+                ret = MEMORY_E;
+                break;
+            }
+
+            /* Continue the search for the next chunk */
+            rv = session->func->C_FindObjects(session->handle, *objects + *count,
+                                              chunkSize, &chunkFound);
+            PKCS11_RV("C_FindObjects", rv);
+            PKCS11_VAL("C_FindObjects Count", chunkFound);
+            if (rv != CKR_OK) {
+                ret = WC_HW_E;
+                break;
+            }
+            *count += chunkFound;
+        }
+        while (ret == 0 && chunkFound == chunkSize);
+
+        rv = session->func->C_FindObjectsFinal(session->handle);
+        PKCS11_RV("C_FindObjectsFinal", rv);
+        if (rv != CKR_OK) {
+            ret = WC_HW_E;
+        }
+    }
+
+    if (ret != 0) {
+        /* If we failed, free the allocated memory for objects. */
+        if (*objects != NULL) {
+            XFREE(*objects, heap, DYNAMIC_TYPE_TMP_BUFFER);
+            *objects = NULL;
+        }
+    }
+
+    return ret;
+}
+#endif
+
 /**
  * Store the private key on the token in the session.
  *
@@ -2384,6 +2591,86 @@ int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear, void* key,
     return ret;
 }
 
+/**
+ * Delete all private keys on the token in the session with the given label.
+ *
+ * @param  [in]  token       Token to store private key on.
+ * @param  [in]  type        Key type.
+ * @param  [in]  label       CKA_LABEL of the key object.
+ * @return  NOT_COMPILED_IN when mechanism not available.
+ * @return  0 on success.
+ */
+int wc_Pkcs11DeleteKeyLabel(Pkcs11Token* token, int type, const char* label)
+{
+    int               ret = 0;
+    Pkcs11Session     session;
+    CK_OBJECT_HANDLE  key = NULL_PTR;
+
+    ret = Pkcs11OpenSession(token, &session, 1);
+    if (ret == 0) {
+        switch (type) {
+    #if !defined(NO_AES) && (defined(HAVE_AESGCM) || defined(HAVE_AES_CBC))
+            case PKCS11_KEY_TYPE_AES_GCM:
+            case PKCS11_KEY_TYPE_AES_CBC: {
+                ret = Pkcs11FindKeyByLabel(&key, CKO_SECRET_KEY, CKK_AES, &session,
+                                            (char*)label, XSTRLEN(label));
+                if (ret == 0) {
+                    session.func->C_DestroyObject(session.handle, key);
+                }
+                break;
+            }
+    #endif
+    #ifdef HAVE_ECC
+            case PKCS11_KEY_TYPE_EC: {
+                ret = Pkcs11FindKeyByLabel(&key, CKO_PRIVATE_KEY,
+                                           CKK_EC, &session,
+                                           (char*)label, XSTRLEN(label));
+                if (ret == 0) {
+                    session.func->C_DestroyObject(session.handle, key);
+                }
+                if (ret == 0) {
+                    ret = Pkcs11FindKeyByLabel(&key, CKO_PUBLIC_KEY,
+                                               CKK_EC, &session,
+                                               (char*)label, XSTRLEN(label));
+                }
+                if (ret == 0) {
+                    session.func->C_DestroyObject(session.handle, key);
+                }
+                break;
+            }
+    #endif
+    #if defined(HAVE_PQC) && defined(HAVE_DILITHIUM)
+            case PKCS11_KEY_TYPE_DILITHIUM: {
+                ret = Pkcs11FindKeyByLabel(&key, CKO_PRIVATE_KEY,
+                                           CKK_ML_DSA, &session,
+                                           (char*)label, XSTRLEN(label));
+                if (ret == 0) {
+                    session.func->C_DestroyObject(session.handle, key);
+                }
+                if (ret == 0) {
+                    ret = Pkcs11FindKeyByLabel(&key, CKO_PUBLIC_KEY,
+                                               CKK_ML_DSA, &session,
+                                               (char*)label, XSTRLEN(label));
+                }
+                if (ret == 0) {
+                    session.func->C_DestroyObject(session.handle, key);
+                }
+                break;
+            }
+    #endif
+            default:
+                ret = NOT_COMPILED_IN;
+                break;
+        }
+
+        Pkcs11CloseSession(token, &session);
+    }
+
+    (void)label;
+
+    return ret;
+}
+
 #ifndef NO_CERTS
 /**
  * Store the certificate on the token in the session.
@@ -2553,213 +2840,6 @@ int wc_Pkcs11StoreCert_ex(Pkcs11Token* token, int type, void* cert,
     return ret;
 }
 #endif /* !NO_CERTS */
-
-#if !defined(NO_RSA) || defined(HAVE_ECC) || (!defined(NO_AES) && \
-           (defined(HAVE_AESGCM) || defined(HAVE_AES_CBC))) || \
-           !defined(NO_HMAC) || !defined(NO_CERTS)
-
-/**
- * Find the PKCS#11 object containing key data using template.
- *
- * @param  [out]  key          Handle to key object.
- * @param  [in]   session      Session object.
- * @param  [in]   keyTemplate  PKCS #11 template to use in search.
- * @param  [in]   keyTmplCnt   Count of entries in PKCS #11 template.
- * @param  [out]  count        Number of keys matching template.
- * @return  WC_HW_E when a PKCS#11 library call fails.
- * @return  0 on success.
- */
-static int Pkcs11FindKeyByTemplate(CK_OBJECT_HANDLE* key,
-                                   Pkcs11Session* session,
-                                   CK_ATTRIBUTE *keyTemplate,
-                                   CK_ULONG keyTmplCnt,
-                                   CK_ULONG *count)
-{
-    int             ret = 0;
-    CK_RV           rv;
-
-    WOLFSSL_MSG("PKCS#11: Find Key By Template");
-
-    PKCS11_DUMP_TEMPLATE("Find Key", keyTemplate, keyTmplCnt);
-    rv = session->func->C_FindObjectsInit(session->handle, keyTemplate,
-                                                                    keyTmplCnt);
-    PKCS11_RV("C_FindObjectsInit", rv);
-    if (rv != CKR_OK) {
-        ret = WC_HW_E;
-    }
-    if (ret == 0) {
-        rv = session->func->C_FindObjects(session->handle, key, 1, count);
-        PKCS11_RV("C_FindObjects", rv);
-        PKCS11_VAL("C_FindObjects Count", *count);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-        rv = session->func->C_FindObjectsFinal(session->handle);
-        PKCS11_RV("C_FindObjectsFinal", rv);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-    }
-    return ret;
-}
-
-/**
- * Find the PKCS#11 object containing the private key data by label.
- *
- * @param  [out]  key       Handle to key object.
- * @param  [in]   keyClass  Public or private key class.
- * @param  [in]   keyType   Type of key.
- * @param  [in]   session   Session object.
- * @param  [in]   id        Identifier set against a key.
- * @param  [in]   idLen     Length of identifier.
- * @return  WC_HW_E when a PKCS#11 library call fails.
- * @return  0 on success.
- */
-static int Pkcs11FindKeyByLabel(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
-                                CK_KEY_TYPE keyType, Pkcs11Session* session,
-                                char* label, int labelLen)
-{
-    int             ret = 0;
-    CK_ULONG        count;
-    CK_ATTRIBUTE    keyTemplate[] = {
-        { CKA_CLASS,           &keyClass, sizeof(keyClass)   },
-        { CKA_KEY_TYPE,        &keyType,  sizeof(keyType)    },
-        { CKA_LABEL,           label,     (CK_ULONG)labelLen }
-    };
-    CK_ULONG        keyTmplCnt = sizeof(keyTemplate) / sizeof(*keyTemplate);
-
-    WOLFSSL_MSG("PKCS#11: Find Key By Label");
-
-    ret = Pkcs11FindKeyByTemplate(key, session, keyTemplate, keyTmplCnt,
-                                                                        &count);
-    if (ret == 0 && count == 0)
-        ret = WC_HW_E;
-
-    return ret;
-}
-
-/**
- * Find the PKCS#11 object containing the private key data by ID.
- *
- * @param  [out]  key       Handle to key object.
- * @param  [in]   keyClass  Public or private key class.
- * @param  [in]   keyType   Type of key.
- * @param  [in]   session   Session object.
- * @param  [in]   id        Identifier set against a key.
- * @param  [in]   idLen     Length of identifier.
- * @return  WC_HW_E when a PKCS#11 library call fails.
- * @return  0 on success.
- */
-static int Pkcs11FindKeyById(CK_OBJECT_HANDLE* key, CK_OBJECT_CLASS keyClass,
-                             CK_KEY_TYPE keyType, Pkcs11Session* session,
-                             byte* id, int idLen)
-{
-    int             ret = 0;
-    CK_ULONG        count;
-    CK_ATTRIBUTE    keyTemplate[] = {
-#ifndef WC_PKCS11_FIND_WITH_ID_ONLY
-        { CKA_CLASS,           &keyClass, sizeof(keyClass) },
-        { CKA_KEY_TYPE,        &keyType,  sizeof(keyType)  },
-#endif
-        { CKA_ID,              id,        (CK_ULONG)idLen  }
-    };
-    CK_ULONG        keyTmplCnt = sizeof(keyTemplate) / sizeof(*keyTemplate);
-
-    WOLFSSL_MSG("PKCS#11: Find Key By Id");
-
-    ret = Pkcs11FindKeyByTemplate(key, session, keyTemplate, keyTmplCnt,
-                                                                        &count);
-    if (ret == 0 && count == 0)
-        ret = WC_HW_E;
-
-    return ret;
-}
-#endif
-
-#if !defined(NO_CERTS)
-/**
- * Find all PKCS#11 objects matching the template.
- *
- * @param  [out]  objects      Pointer to the array of found object handles.
- * @param  [in]   session      Session object.
- * @param  [in]   template     PKCS #11 template to use in search.
- * @param  [in]   tmplCnt      Count of entries in PKCS #11 template.
- * @param  [in]   heap         Heap to use for memory allocation.
- * @param  [out]  count        Number of objects found.
- * @return  WC_HW_E when a PKCS#11 library call fails.
- * @return  0 on success.
- */
-static int Pkcs11FindObjectsByTemplate(CK_OBJECT_HANDLE** objects,
-                                       Pkcs11Session* session,
-                                       CK_ATTRIBUTE *template,
-                                       CK_ULONG tmplCnt,
-                                       void* heap,
-                                       CK_ULONG *count)
-{
-    int             ret = 0;
-    CK_RV           rv;
-    CK_ULONG        chunkSize = 10;
-    CK_ULONG        chunkFound = 0;
-
-    WOLFSSL_MSG("PKCS#11: Find Objects By Template");
-
-    PKCS11_DUMP_TEMPLATE("Find Objects", template, tmplCnt);
-    rv = session->func->C_FindObjectsInit(session->handle, template, tmplCnt);
-    PKCS11_RV("C_FindObjectsInit", rv);
-    if (rv != CKR_OK) {
-        ret = WC_HW_E;
-    }
-    if (ret == 0) {
-        /* As we cannot obtain the final number of objects we may find, we have
-         * search in chunks, until we find no more. */
-        *count = 0;
-
-        do {
-            /* Increase the handle buffer by a chunk */
-            int newSize = (*count + chunkSize) * sizeof(CK_OBJECT_HANDLE);
-            CK_OBJECT_HANDLE* newBuffer = NULL;
-            newBuffer = (CK_OBJECT_HANDLE*)XREALLOC(*objects, newSize, heap,
-                                                    DYNAMIC_TYPE_TMP_BUFFER);
-            if (newBuffer != NULL) {
-                *objects = newBuffer;
-            }
-            else {
-                WOLFSSL_MSG("PKCS#11: Failed to allocate memory for objects");
-                ret = MEMORY_E;
-                break;
-            }
-
-            /* Continue the search for the next chunk */
-            rv = session->func->C_FindObjects(session->handle, *objects + *count,
-                                              chunkSize, &chunkFound);
-            PKCS11_RV("C_FindObjects", rv);
-            PKCS11_VAL("C_FindObjects Count", chunkFound);
-            if (rv != CKR_OK) {
-                ret = WC_HW_E;
-                break;
-            }
-            *count += chunkFound;
-        }
-        while (ret == 0 && chunkFound == chunkSize);
-
-        rv = session->func->C_FindObjectsFinal(session->handle);
-        PKCS11_RV("C_FindObjectsFinal", rv);
-        if (rv != CKR_OK) {
-            ret = WC_HW_E;
-        }
-    }
-
-    if (ret != 0) {
-        /* If we failed, free the allocated memory for objects. */
-        if (*objects != NULL) {
-            XFREE(*objects, heap, DYNAMIC_TYPE_TMP_BUFFER);
-            *objects = NULL;
-        }
-    }
-
-    return ret;
-}
-#endif
 
 #ifndef NO_RSA
 /**

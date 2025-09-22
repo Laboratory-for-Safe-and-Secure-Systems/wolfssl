@@ -125,6 +125,8 @@ WOLFSSL_API int wc_Pkcs11StoreKey(Pkcs11Token* token, int type, int clear,
     void* key);
 WOLFSSL_API int wc_Pkcs11StoreKey_ex(Pkcs11Token* token, int type, int clear,
     void* key, int persistent);
+WOLFSSL_API int wc_Pkcs11DeleteKeyLabel(Pkcs11Token* token, int type,
+    const char* label);
 
 #ifndef NO_CERTS
 WOLFSSL_API int wc_Pkcs11StoreCert(Pkcs11Token* token, int type, void* cert,
